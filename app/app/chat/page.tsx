@@ -175,20 +175,11 @@ export default function ChatPage() {
   }
 
   const startVideoCall = async () => {
-    if (!selectedRoom) return
+    if (!selectedRoom || !user) return
 
     try {
-      toast({
-        title: "Starting video call",
-        description: `Starting call in ${selectedRoom.name}...`,
-      })
-      // Simulate video call start
-      setTimeout(() => {
-        toast({
-          title: "Call started",
-          description: "Video call is now active",
-        })
-      }, 1000)
+        const meetingUrl = await jitsiService.createDirectCall(selectedRoom.roomId, user.$id, selectedRoom.participants);
+        window.open(meetingUrl, "_blank");
     } catch (error) {
       console.error("Failed to start video call:", error)
       toast({

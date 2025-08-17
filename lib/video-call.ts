@@ -1,255 +1,138 @@
-// Video Call Integration using WebRTC and Socket.IO
-import { io, type Socket } from "socket.io-client"
+// Jitsi Meet Integration Service
 
-interface VideoCallConfig {
-  roomId: string
-  userId: string
-  userName: string
+import { calendarService } from './services/calendar';
+import { notificationService } from './services/notifications';
+import { podsService } from './services/pods';
+import { authService } from './auth';
+
+interface JitsiMeetingOptions {
+  roomName: string;
+  width?: string;
+  height?: string;
+  parentNode?: HTMLElement;
+  configOverwrite?: object;
+  interfaceConfigOverwrite?: object;
+  userInfo?: {
+    displayName: string;
+    email?: string;
+  };
 }
 
-interface Participant {
-  id: string
-  name: string
-  isVideoOn: boolean
-  isAudioOn: boolean
-  stream?: MediaStream
-}
+class JitsiService {
+  private domain = "meet.jit.si";
 
-class VideoCallService {
-  private socket: Socket | null = null
-  private localStream: MediaStream | null = null
-  private peerConnections: Map<string, RTCPeerConnection> = new Map()
-  private participants: Map<string, Participant> = new Map()
-  private config: VideoCallConfig | null = null
-  private iceServers = [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }]
+  generateMeetingUrl(roomName: string): string {
+    const cleanRoomName = roomName.replace(/[^a-zA-Z0-9]/g, "");
+    return `https://${this.domain}/${cleanRoomName}`;
+  }
 
-  async initialize(config: VideoCallConfig) {
-    this.config = config
+  getMeetingOptions(options: Partial<JitsiMeetingOptions>): JitsiMeetingOptions {
+    const roomName = options.roomName || `PeerSpark-Session-${Date.now()}`;
+    return {
+      roomName,
+      width: '100%',
+      height: '100%',
+      parentNode: undefined,
+      configOverwrite: {
+        startWithAudioMuted: true,
+        startWithVideoMuted: true,
+        prejoinPageEnabled: false,
+        ...options.configOverwrite,
+      },
+      interfaceConfigOverwrite: {
+        TOOLBAR_BUTTONS: [
+          'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+          'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
+          'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+          'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+          'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
+        ],
+        ...options.interfaceConfigOverwrite,
+      },
+      userInfo: {
+        displayName: 'Guest',
+        ...options.userInfo,
+      },
+    };
+  }
 
-    // Connect to Socket.IO server
-    this.socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "ws://localhost:3001", {
-      transports: ["websocket"],
-    })
-
-    this.setupSocketListeners()
-
-    // Get user media
+  async createPodMeeting(podId: string, userId: string, title: string): Promise<string> {
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      })
-      return this.localStream
+      const pod = await podsService.getPod(podId);
+      const user = await authService.getUserProfile(userId);
+
+      if (!pod || !user) {
+        throw new Error("Pod or user not found");
+      }
+
+      const roomName = `PeerSpark-Pod-${podId}-${Date.now()}`;
+      const meetingUrl = this.generateMeetingUrl(roomName);
+
+      // Create a calendar event for the meeting
+      await calendarService.createEvent({
+        userId,
+        title: `${title} - ${pod.name}`,
+        description: `Video meeting for ${pod.name} pod`,
+        startTime: new Date().toISOString(),
+        endTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour duration
+        type: "meeting",
+        podId: podId,
+        meetingUrl: meetingUrl,
+        attendees: pod.members,
+      });
+
+      // Notify pod members
+      const notificationPromises = pod.members
+        .filter((memberId) => memberId !== userId)
+        .map((memberId) =>
+          notificationService.createNotification({
+            userId: memberId,
+            title: "Meeting Started",
+            message: `${user.displayName} started a meeting in ${pod.name}`,
+            type: "event",
+            actionUrl: meetingUrl,
+            actionText: "Join Meeting",
+          })
+        );
+
+      await Promise.all(notificationPromises);
+
+      return meetingUrl;
     } catch (error) {
-      console.error("Error accessing media devices:", error)
-      throw error
+      console.error("Error creating pod meeting:", error);
+      throw error;
     }
   }
 
-  private setupSocketListeners() {
-    if (!this.socket) return
-
-    this.socket.on("user-joined", (participant: Participant) => {
-      this.participants.set(participant.id, participant)
-      this.createPeerConnection(participant.id)
-    })
-
-    this.socket.on("user-left", (userId: string) => {
-      this.participants.delete(userId)
-      const peerConnection = this.peerConnections.get(userId)
-      if (peerConnection) {
-        peerConnection.close()
-        this.peerConnections.delete(userId)
-      }
-    })
-
-    this.socket.on("offer", async ({ from, offer }) => {
-      const peerConnection = this.createPeerConnection(from)
-      await peerConnection.setRemoteDescription(offer)
-
-      const answer = await peerConnection.createAnswer()
-      await peerConnection.setLocalDescription(answer)
-
-      this.socket?.emit("answer", { to: from, answer })
-    })
-
-    this.socket.on("answer", async ({ from, answer }) => {
-      const peerConnection = this.peerConnections.get(from)
-      if (peerConnection) {
-        await peerConnection.setRemoteDescription(answer)
-      }
-    })
-
-    this.socket.on("ice-candidate", async ({ from, candidate }) => {
-      const peerConnection = this.peerConnections.get(from)
-      if (peerConnection) {
-        await peerConnection.addIceCandidate(candidate)
-      }
-    })
-
-    this.socket.on("media-state-changed", ({ userId, isVideoOn, isAudioOn }) => {
-      const participant = this.participants.get(userId)
-      if (participant) {
-        participant.isVideoOn = isVideoOn
-        participant.isAudioOn = isAudioOn
-        this.participants.set(userId, participant)
-      }
-    })
-  }
-
-  private createPeerConnection(userId: string): RTCPeerConnection {
-    const peerConnection = new RTCPeerConnection({ iceServers: this.iceServers })
-
-    // Add local stream tracks
-    if (this.localStream) {
-      this.localStream.getTracks().forEach((track) => {
-        peerConnection.addTrack(track, this.localStream!)
-      })
-    }
-
-    // Handle remote stream
-    peerConnection.ontrack = (event) => {
-      const participant = this.participants.get(userId)
-      if (participant) {
-        participant.stream = event.streams[0]
-        this.participants.set(userId, participant)
-      }
-    }
-
-    // Handle ICE candidates
-    peerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
-        this.socket?.emit("ice-candidate", {
-          to: userId,
-          candidate: event.candidate,
-        })
-      }
-    }
-
-    this.peerConnections.set(userId, peerConnection)
-    return peerConnection
-  }
-
-  async joinRoom() {
-    if (!this.socket || !this.config) return
-
-    this.socket.emit("join-room", {
-      roomId: this.config.roomId,
-      userId: this.config.userId,
-      userName: this.config.userName,
-    })
-  }
-
-  async leaveRoom() {
-    if (!this.socket || !this.config) return
-
-    this.socket.emit("leave-room", {
-      roomId: this.config.roomId,
-      userId: this.config.userId,
-    })
-
-    // Close all peer connections
-    this.peerConnections.forEach((pc) => pc.close())
-    this.peerConnections.clear()
-
-    // Stop local stream
-    if (this.localStream) {
-      this.localStream.getTracks().forEach((track) => track.stop())
-      this.localStream = null
-    }
-
-    // Disconnect socket
-    this.socket.disconnect()
-    this.socket = null
-  }
-
-  toggleVideo(): boolean {
-    if (!this.localStream) return false
-
-    const videoTrack = this.localStream.getVideoTracks()[0]
-    if (videoTrack) {
-      videoTrack.enabled = !videoTrack.enabled
-
-      // Notify other participants
-      this.socket?.emit("media-state-changed", {
-        roomId: this.config?.roomId,
-        isVideoOn: videoTrack.enabled,
-        isAudioOn: this.localStream.getAudioTracks()[0]?.enabled || false,
-      })
-
-      return videoTrack.enabled
-    }
-    return false
-  }
-
-  toggleAudio(): boolean {
-    if (!this.localStream) return false
-
-    const audioTrack = this.localStream.getAudioTracks()[0]
-    if (audioTrack) {
-      audioTrack.enabled = !audioTrack.enabled
-
-      // Notify other participants
-      this.socket?.emit("media-state-changed", {
-        roomId: this.config?.roomId,
-        isVideoOn: this.localStream.getVideoTracks()[0]?.enabled || false,
-        isAudioOn: audioTrack.enabled,
-      })
-
-      return audioTrack.enabled
-    }
-    return false
-  }
-
-  async shareScreen() {
+  async createDirectCall(chatRoomId: string, initiatorId: string, participants: string[]): Promise<string> {
     try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true,
-      })
+      const initiator = await authService.getUserProfile(initiatorId);
+      if (!initiator) throw new Error("Initiator not found");
 
-      // Replace video track in all peer connections
-      const videoTrack = screenStream.getVideoTracks()[0]
-      this.peerConnections.forEach(async (pc) => {
-        const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video")
-        if (sender) {
-          await sender.replaceTrack(videoTrack)
-        }
-      })
+      const roomName = `PeerSpark-Call-${chatRoomId}-${Date.now()}`;
+      const meetingUrl = this.generateMeetingUrl(roomName);
 
-      return screenStream
+      const notificationPromises = participants
+        .filter((p) => p !== initiatorId)
+        .map((participantId) =>
+          notificationService.createNotification({
+            userId: participantId,
+            title: "Incoming Call",
+            message: `${initiator.displayName} is calling you.`,
+            type: "event", // or a new 'call' type
+            actionUrl: meetingUrl,
+            actionText: "Join Call",
+          })
+        );
+
+      await Promise.all(notificationPromises);
+
+      return meetingUrl;
     } catch (error) {
-      console.error("Error starting screen share:", error)
-      throw error
+      console.error("Error creating direct call:", error);
+      throw error;
     }
   }
-
-  async stopScreenShare() {
-    if (!this.localStream) return
-
-    const videoTrack = this.localStream.getVideoTracks()[0]
-
-    // Replace screen share track with camera track
-    this.peerConnections.forEach(async (pc) => {
-      const sender = pc.getSenders().find((s) => s.track && s.track.kind === "video")
-      if (sender && videoTrack) {
-        await sender.replaceTrack(videoTrack)
-      }
-    })
-  }
-
-  getParticipants(): Participant[] {
-    return Array.from(this.participants.values())
-  }
-
-  getLocalStream(): MediaStream | null {
-    return this.localStream
-  }
 }
 
-// Utility function to create video call service
-export function createVideoCall(config: VideoCallConfig) {
-  return new VideoCallService(config)
-}
-
-export type { VideoCallConfig, Participant }
+export const jitsiService = new JitsiService();

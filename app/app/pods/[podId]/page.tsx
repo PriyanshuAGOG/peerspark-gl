@@ -57,10 +57,7 @@ import InteractiveWhiteboard from "@/components/interactive-whiteboard"
 import { questsService, Quest } from "@/lib/services/quests"
 import { podsService, Pod } from "@/lib/services/pods"
 import { useAuth } from "@/contexts/auth-context"
-
-// TODO: Replace with real data
-const POD_MEMBERS: any[] = []
-const POD_RESOURCES: any[] = []
+import { jitsiService } from "@/lib/video-call"
 
 // Custom Pod Navigation Component - Only show on mobile
 function PodNavigation({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (tab: string) => void }) {
@@ -208,6 +205,8 @@ function PodPageComponent() {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const { podId } = useParams()
+  const { user } = useAuth()
+  const { toast } = useToast()
 
   useEffect(() => {
       const fetchPod = async () => {
@@ -220,12 +219,28 @@ function PodPageComponent() {
       fetchPod();
   }, [podId])
 
+  const handleStartMeeting = async () => {
+    if (!pod || !user) return;
+    try {
+      const meetingUrl = await jitsiService.createPodMeeting(pod.$id, user.$id, pod.name);
+      window.open(meetingUrl, "_blank");
+    } catch (error) {
+      toast({
+        title: "Failed to start meeting",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) return <div>Loading Pod...</div>
   if (!pod) return <div>Pod not found.</div>
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
         <PodNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+        <div className="hidden md:block relative mb-6 lg:mb-8">
+            <Button onClick={handleStartMeeting}>Start Meeting</Button>
+        </div>
         {/* ... rest of the PodPage JSX using `pod` state ... */}
     </div>
   )

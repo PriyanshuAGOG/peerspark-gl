@@ -38,6 +38,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { calendarService, CalendarEvent } from "@/lib/services/calendar"
+import { jitsiService } from "@/lib/video-call"
 import { Skeleton } from "@/components/ui/skeleton"
 
 const eventTypes = [
@@ -96,6 +97,7 @@ export default function CalendarPage() {
     podId: "",
     isRecurring: false,
     reminders: [15],
+    isMeeting: false,
   })
 
   const getDaysInMonth = (date: Date) => {
@@ -177,9 +179,14 @@ export default function CalendarPage() {
   const handleCreateEvent = async () => {
     if (!user) return;
 
-    const { startDate, startTime, endDate, endTime, ...rest } = formData;
+    const { startDate, startTime, endDate, endTime, isMeeting, ...rest } = formData;
     const startDateTime = new Date(`${startDate}T${startTime}`);
     const endDateTime = new Date(`${endDate}T${endTime}`);
+
+    let meetingUrl: string | undefined;
+    if (isMeeting) {
+        meetingUrl = jitsiService.generateMeetingUrl(`PeerSpark-Meeting-${Date.now()}`);
+    }
 
     try {
         const newEvent = await calendarService.createEvent({
@@ -187,6 +194,7 @@ export default function CalendarPage() {
             userId: user.$id,
             startTime: startDateTime.toISOString(),
             endTime: endDateTime.toISOString(),
+            meetingUrl,
         });
         setEvents(prev => [...prev, newEvent]);
         setIsCreateDialogOpen(false);
@@ -219,6 +227,61 @@ export default function CalendarPage() {
 
   return (
     <div className="flex h-screen bg-background">
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Event</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title" className="text-right">
+                Title
+              </Label>
+              <Input id="title" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">
+                Description
+              </Label>
+              <Input id="description" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="startDate" className="text-right">
+                Start Date
+              </Label>
+              <Input id="startDate" type="date" value={formData.startDate} onChange={(e) => setFormData({...formData, startDate: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="startTime" className="text-right">
+                Start Time
+              </Label>
+              <Input id="startTime" type="time" value={formData.startTime} onChange={(e) => setFormData({...formData, startTime: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="endDate" className="text-right">
+                End Date
+              </Label>
+              <Input id="endDate" type="date" value={formData.endDate} onChange={(e) => setFormData({...formData, endDate: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="endTime" className="text-right">
+                End Time
+              </Label>
+              <Input id="endTime" type="time" value={formData.endTime} onChange={(e) => setFormData({...formData, endTime: e.target.value})} className="col-span-3" />
+            </div>
+            <div className="flex items-center space-x-2">
+                <Switch
+                id="is-meeting"
+                checked={formData.isMeeting}
+                onCheckedChange={(checked) => setFormData({ ...formData, isMeeting: checked })}
+                />
+                <Label htmlFor="is-meeting">Make this a video meeting</Label>
+            </div>
+          </div>
+          <Button onClick={handleCreateEvent}>Create</Button>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex-1 flex flex-col">
         <div className="p-3 md:p-4 border-b bg-card">
           <div className="flex items-center justify-between mb-4">
