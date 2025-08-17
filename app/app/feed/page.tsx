@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,185 +15,60 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Heart, MessageCircle, Share2, Bookmark, Search, TrendingUp, Users, Filter, MoreHorizontal, User, Flag } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Bookmark, Search, TrendingUp, Users, Filter, MoreHorizontal, User, Flag, Loader2 } from 'lucide-react'
+import { PostCard } from "@/components/post-card"
 import { CreatePostModal } from "@/components/create-post-modal"
 import { MobileHeader } from "@/components/mobile-header"
 import { FloatingActionButton } from "@/components/floating-action-button"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
+import { postsService, Post } from "@/lib/services/posts"
+import { Skeleton } from "@/components/ui/skeleton"
 
-interface Post {
-  id: string
-  title?: string
-  content: string
-  author: {
-    name: string
-    avatar: string
-    username: string
-  }
-  timestamp: string
-  likes: number
-  comments: number
-  shares: number
-  tags: string[]
-  pod?: {
-    id: string
-    name: string
-    members: number
-  }
-  attachments?: string[]
-  isLiked: boolean
-  isBookmarked: boolean
-}
-
-const INITIAL_POSTS: Post[] = [
-  {
-    id: "1",
-    title: "Just completed my first system design interview!",
-    content:
-      "After months of preparation with the System Design pod, I finally nailed my first system design interview at a FAANG company! The key was practicing with real scenarios and getting feedback from experienced engineers. Here are my top 3 tips:\n\n1. Start with requirements gathering\n2. Think about scale from the beginning\n3. Don't forget about monitoring and logging\n\nThanks to everyone in the pod who helped me practice! 🚀",
-    author: {
-      name: "Arjun Patel",
-      avatar: "/placeholder.svg?height=40&width=40",
-      username: "@arjun_codes",
-    },
-    timestamp: "2h",
-    likes: 24,
-    comments: 8,
-    shares: 3,
-    tags: ["SystemDesign", "Interview", "FAANG", "Success"],
-    pod: {
-      id: "system-design",
-      name: "System Design Masters",
-      members: 678,
-    },
-    isLiked: false,
-    isBookmarked: true,
-  },
-  {
-    id: "2",
-    content:
-      "Quick question for the DSA community: What's the best approach to solve sliding window problems? I keep getting confused with the two-pointer technique. Any good resources or practice problems you'd recommend?",
-    author: {
-      name: "Priya Sharma",
-      avatar: "/placeholder.svg?height=40&width=40",
-      username: "@priya_dev",
-    },
-    timestamp: "4h",
-    likes: 12,
-    comments: 15,
-    shares: 2,
-    tags: ["DSA", "SlidingWindow", "Help", "Algorithms"],
-    pod: {
-      id: "dsa-masters",
-      name: "DSA Masters",
-      members: 1247,
-    },
-    isLiked: true,
-    isBookmarked: false,
-  },
-  {
-    id: "3",
-    title: "My 100 Days of Code Journey - Day 50! 🎉",
-    content:
-      "Halfway through my 100 Days of Code challenge! Here's what I've learned so far:\n\n✅ Built 5 full-stack projects\n✅ Learned React, Node.js, and MongoDB\n✅ Contributed to 3 open-source projects\n✅ Made amazing friends in the Web Dev Pro pod\n\nThe consistency has been game-changing. Even on tough days, coding for just 30 minutes kept the momentum going. To anyone thinking about starting - just begin! 💪",
-    author: {
-      name: "Karan Singh",
-      avatar: "/placeholder.svg?height=40&width=40",
-      username: "@karan_builds",
-    },
-    timestamp: "6h",
-    likes: 45,
-    comments: 12,
-    shares: 8,
-    tags: ["100DaysOfCode", "WebDev", "Motivation", "Progress"],
-    pod: {
-      id: "web-dev-pro",
-      name: "Web Dev Pro",
-      members: 892,
-    },
-    isLiked: true,
-    isBookmarked: true,
-  },
-  {
-    id: "4",
-    content:
-      "Just discovered this amazing resource for learning machine learning! 'Hands-On Machine Learning' by Aurélien Géron is absolutely fantastic. The practical examples and clear explanations make complex concepts so much easier to understand. Highly recommend it to anyone in the AI/ML space! 📚🤖",
-    author: {
-      name: "Neha Gupta",
-      avatar: "/placeholder.svg?height=40&width=40",
-      username: "@neha_ai",
-    },
-    timestamp: "8h",
-    likes: 18,
-    comments: 6,
-    shares: 4,
-    tags: ["MachineLearning", "BookRecommendation", "AI", "Learning"],
-    pod: {
-      id: "ai-ml-hub",
-      name: "AI/ML Hub",
-      members: 1456,
-    },
-    isLiked: false,
-    isBookmarked: false,
-  },
-  {
-    id: "5",
-    title: "Free Mock Interview Sessions This Weekend!",
-    content:
-      "Hey everyone! I'm organizing free mock interview sessions this weekend for anyone preparing for tech interviews. We'll cover:\n\n🔸 Coding interviews (DSA focus)\n🔸 System design discussions\n🔸 Behavioral questions\n🔸 Resume review\n\nComment below if you're interested! Limited spots available. Let's help each other succeed! 🤝",
-    author: {
-      name: "Rahul Sharma",
-      avatar: "/placeholder.svg?height=40&width=40",
-      username: "@rahul_mentor",
-    },
-    timestamp: "12h",
-    likes: 67,
-    comments: 23,
-    shares: 15,
-    tags: ["MockInterview", "Free", "Community", "InterviewPrep"],
-    isLiked: true,
-    isBookmarked: true,
-  },
-]
-
-const TRENDING_TOPICS = [
-  { tag: "SystemDesign", posts: 45 },
-  { tag: "DSA", posts: 89 },
-  { tag: "WebDev", posts: 67 },
-  { tag: "MachineLearning", posts: 34 },
-  { tag: "InterviewPrep", posts: 56 },
-]
+// TODO: Fetch trending topics from backend
+const TRENDING_TOPICS: any[] = []
 
 export default function FeedPage() {
-  const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS)
+  const [posts, setPosts] = useState<Post[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("all")
   const { toast } = useToast()
   const router = useRouter()
+  const { user } = useAuth()
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        setIsLoading(true)
+        const fetchedPosts = await postsService.getFeedPosts()
+        setPosts(fetchedPosts)
+        setError(null)
+      } catch (err) {
+        setError("Failed to fetch posts. Please try again later.")
+        toast({
+          title: "Error",
+          description: "Could not fetch feed posts.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchPosts()
+  }, [])
 
   const handleLike = (postId: string) => {
-    setPosts(
-      posts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              isLiked: !post.isLiked,
-              likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-            }
-          : post,
-      ),
-    )
+    // TODO: Implement backend call for liking a post
+    console.log(`Liking post ${postId}`)
   }
 
   const handleBookmark = (postId: string) => {
-    setPosts(posts.map((post) => (post.id === postId ? { ...post, isBookmarked: !post.isBookmarked } : post)))
-
-    const post = posts.find((p) => p.id === postId)
-    toast({
-      title: post?.isBookmarked ? "Removed from bookmarks" : "Added to bookmarks",
-      description: post?.isBookmarked ? "Post removed from your saved items" : "Post saved to your bookmarks",
-    })
+    // TODO: Implement backend call for bookmarking a post
+    console.log(`Bookmarking post ${postId}`)
   }
 
   const handleShare = (postId: string) => {
@@ -234,16 +109,54 @@ export default function FeedPage() {
       searchQuery === "" ||
       post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
       post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      post.author.name.toLowerCase().includes(searchQuery.toLowerCase())
+      post.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+
+    // TODO: Implement author filtering
+    // post.author.name.toLowerCase().includes(searchQuery.toLowerCase())
 
     const matchesTab =
       activeTab === "all" ||
       (activeTab === "following" && Math.random() > 0.5) || // Simulate following
-      (activeTab === "pods" && post.pod)
+      (activeTab === "pods" && post.podId)
 
     return matchesSearch && matchesTab
   })
+
+  const renderPostSkeletons = () => (
+    [...Array(5)].map((_, index) => (
+      <Card key={index} className="border-0 md:border shadow-sm">
+        <CardHeader className="pb-3 px-4 md:px-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-3">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div>
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-16 mt-1" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-8" />
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0 px-4 md:px-6">
+          <Skeleton className="h-5 w-3/4 mb-2" />
+          <Skeleton className="h-4 w-full mb-1" />
+          <Skeleton className="h-4 w-full mb-1" />
+          <Skeleton className="h-4 w-1/2 mb-4" />
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-5 w-20" />
+          </div>
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div className="flex items-center space-x-4">
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-8 w-16" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    ))
+  )
 
   return (
     <div className="min-h-screen bg-background">
@@ -307,152 +220,31 @@ export default function FeedPage() {
         <div className="grid gap-6 lg:grid-cols-4">
           {/* Main Feed */}
           <div className="lg:col-span-3 space-y-4 md:space-y-6">
-            {filteredPosts.length === 0 ? (
+            {isLoading ? (
+              renderPostSkeletons()
+            ) : error ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <div className="text-destructive">
+                    <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-semibold mb-2">Could not load feed</h3>
+                    <p>{error}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : filteredPosts.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <div className="text-muted-foreground">
                     <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <h3 className="text-lg font-semibold mb-2">No posts found</h3>
-                    <p>Try adjusting your search or filters</p>
+                    <p>Try adjusting your search or filters, or be the first to post!</p>
                   </div>
                 </CardContent>
               </Card>
             ) : (
               filteredPosts.map((post) => (
-                <Card key={post.id} className="hover:shadow-md transition-shadow border-0 md:border shadow-sm">
-                  <CardHeader className="pb-3 px-4 md:px-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-3">
-                        <Avatar 
-                          className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all" 
-                          onClick={() => handlePostClick(post.author.username)}
-                        >
-                          <AvatarImage src={post.author.avatar || "/placeholder.svg"} alt={post.author.name} />
-                          <AvatarFallback>
-                            {post.author.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <h4 
-                              className="font-semibold text-sm cursor-pointer hover:underline" 
-                              onClick={() => handlePostClick(post.author.username)}
-                            >
-                              {post.author.name}
-                            </h4>
-                            <span className="text-muted-foreground text-sm hidden md:inline">
-                              {post.author.username}
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                            <span>{post.timestamp}</span>
-                            {post.pod && (
-                              <>
-                                <span>•</span>
-                                <Badge 
-                                  variant="outline" 
-                                  className="text-xs cursor-pointer hover:bg-muted"
-                                  onClick={() => router.push(`/app/pods/${post.pod?.id}`)}
-                                >
-                                  <Users className="w-3 h-3 mr-1" />
-                                  {post.pod.name}
-                                </Badge>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleBookmark(post.id)}
-                          className={`h-8 w-8 ${post.isBookmarked ? "text-yellow-500" : ""}`}
-                        >
-                          <Bookmark className={`w-4 h-4 ${post.isBookmarked ? "fill-current" : ""}`} />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handlePostClick(post.author.username)}>
-                              <User className="w-4 h-4 mr-2" />
-                              View Profile
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleShare(post.id)}>
-                              <Share2 className="w-4 h-4 mr-2" />
-                              Share Post
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleBookmark(post.id)}>
-                              <Bookmark className="w-4 h-4 mr-2" />
-                              {post.isBookmarked ? "Remove Bookmark" : "Bookmark"}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => handleReportPost(post.id)}
-                            >
-                              <Flag className="w-4 h-4 mr-2" />
-                              Report Post
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0 px-4 md:px-6">
-                    {post.title && <h3 className="font-semibold text-lg mb-2">{post.title}</h3>}
-                    <div className="text-sm mb-4 whitespace-pre-wrap leading-relaxed">{post.content}</div>
-
-                    {post.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {post.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80">
-                            #{tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-4 border-t">
-                      <div className="flex items-center space-x-1 md:space-x-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleLike(post.id)}
-                          className={`${post.isLiked ? "text-red-500" : ""} hover:text-red-500 h-8 px-2 md:px-3`}
-                        >
-                          <Heart className={`w-4 h-4 mr-1 md:mr-2 ${post.isLiked ? "fill-current" : ""}`} />
-                          <span className="text-xs md:text-sm">{post.likes}</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleComment(post.id)}
-                          className="hover:text-blue-500 h-8 px-2 md:px-3"
-                        >
-                          <MessageCircle className="w-4 h-4 mr-1 md:mr-2" />
-                          <span className="text-xs md:text-sm">{post.comments}</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleShare(post.id)}
-                          className="hover:text-green-500 h-8 px-2 md:px-3"
-                        >
-                          <Share2 className="w-4 h-4 mr-1 md:mr-2" />
-                          <span className="text-xs md:text-sm hidden md:inline">{post.shares}</span>
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <PostCard key={post.$id} post={post} />
               ))
             )}
           </div>

@@ -18,71 +18,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Plus, X, ImageIcon, Link, Hash, Users } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-
-interface Post {
-  id: string
-  title?: string
-  content: string
-  author: {
-    name: string
-    avatar: string
-    username: string
-  }
-  timestamp: string
-  likes: number
-  comments: number
-  shares: number
-  tags: string[]
-  pod?: {
-    id: string
-    name: string
-    members: number
-  }
-  attachments?: string[]
-  isLiked: boolean
-  isBookmarked: boolean
-}
+import { useAuth } from "@/contexts/auth-context"
+import { postsService, Post } from "@/lib/services/posts"
 
 interface CreatePostModalProps {
   onPostCreated: (post: Post) => void
 }
 
-const AVAILABLE_PODS = [
-  { id: "dsa-masters", name: "DSA Masters", members: 1247 },
-  { id: "system-design", name: "System Design Masters", members: 678 },
-  { id: "web-dev-pro", name: "Web Dev Pro", members: 892 },
-  { id: "ai-ml-hub", name: "AI/ML Hub", members: 1456 },
-  { id: "neet-biology", name: "NEET Biology Squad", members: 543 },
-]
-
-const SUGGESTED_TAGS = [
-  "DSA",
-  "SystemDesign",
-  "WebDev",
-  "MachineLearning",
-  "Interview",
-  "Tutorial",
-  "Question",
-  "Resource",
-  "Achievement",
-  "Help",
-]
+// TODO: Fetch available pods and suggested tags from the backend
+const AVAILABLE_PODS: any[] = []
+const SUGGESTED_TAGS: any[] = []
 
 export function CreatePostModal({ onPostCreated }: CreatePostModalProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
-  const [selectedPod, setSelectedPod] = useState("public") // Updated default value
+  const [selectedPod, setSelectedPod] = useState("public")
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
-
-  const user = {
-    name: "Alex Johnson",
-    avatar: "/placeholder.svg?height=40&width=40",
-    username: "@alex_johnson",
-  }
+  const { user, profile } = useAuth()
 
   const handleAddTag = (tag: string) => {
     if (tag && !tags.includes(tag) && tags.length < 5) {
@@ -96,7 +52,7 @@ export function CreatePostModal({ onPostCreated }: CreatePostModalProps) {
   }
 
   const handleSubmit = async () => {
-    if (!content.trim()) {
+    if (!content.trim() || !user) {
       toast({
         title: "Content required",
         description: "Please add some content to your post",
@@ -107,40 +63,49 @@ export function CreatePostModal({ onPostCreated }: CreatePostModalProps) {
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const postData = {
+        authorId: user.$id,
+        title: title.trim(),
+        content: content.trim(),
+        type: 'text' as const,
+        tags,
+        podId: selectedPod !== "public" ? selectedPod : undefined,
+        isPublic: selectedPod === "public",
+        allowComments: true,
+        mediaUrls: [],
+        thumbnailUrl: '',
+        category: '',
+        subject: '',
+      };
 
-    const newPost: Post = {
-      id: Date.now().toString(),
-      title: title.trim() || undefined,
-      content: content.trim(),
-      author: user,
-      timestamp: "now",
-      likes: 0,
-      comments: 0,
-      shares: 0,
-      tags,
-      pod: selectedPod !== "public" ? AVAILABLE_PODS.find((p) => p.id === selectedPod) : undefined,
-      isLiked: false,
-      isBookmarked: false,
+      const newPost = await postsService.createPost(postData);
+      onPostCreated(newPost);
+
+      // Reset form
+      setTitle("")
+      setContent("")
+      setSelectedPod("public")
+      setTags([])
+      setNewTag("")
+      setIsOpen(false)
+
+      toast({
+        title: "Post created!",
+        description: "Your post has been shared with the community",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Failed to create post",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
-
-    onPostCreated(newPost)
-
-    // Reset form
-    setTitle("")
-    setContent("")
-    setSelectedPod("public") // Updated default value
-    setTags([])
-    setNewTag("")
-    setIsOpen(false)
-    setIsSubmitting(false)
-
-    toast({
-      title: "Post created!",
-      description: "Your post has been shared with the community",
-    })
   }
+
+  if (!profile) return null
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -159,12 +124,14 @@ export function CreatePostModal({ onPostCreated }: CreatePostModalProps) {
           {/* Author Info */}
           <div className="flex items-center space-x-3">
             <Avatar>
-              <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
-              <AvatarFallback>AJ</AvatarFallback>
+              <AvatarImage src={profile.avatar || "/placeholder.svg"} alt={profile.displayName} />
+              <AvatarFallback>
+                {profile.displayName.split(" ").map((n) => n[0]).join("")}
+              </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-semibold text-sm">{user.name}</p>
-              <p className="text-xs text-muted-foreground">{user.username}</p>
+              <p className="font-semibold text-sm">{profile.displayName}</p>
+              <p className="text-xs text-muted-foreground">@{profile.username}</p>
             </div>
           </div>
 
@@ -176,7 +143,7 @@ export function CreatePostModal({ onPostCreated }: CreatePostModalProps) {
                 <SelectValue placeholder="Select a pod or post publicly" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="public">Public Post</SelectItem> {/* Updated value prop */}
+                <SelectItem value="public">Public Post</SelectItem>
                 {AVAILABLE_PODS.map((pod) => (
                   <SelectItem key={pod.id} value={pod.id}>
                     <div className="flex items-center space-x-2">
@@ -293,7 +260,7 @@ export function CreatePostModal({ onPostCreated }: CreatePostModalProps) {
             <Label>Attachments</Label>
             <div className="flex space-x-2">
               <Button variant="outline" size="sm" disabled>
-                <ImageIcon className="w-4 h-4 mr-2" /> {/* Updated usage */}
+                <ImageIcon className="w-4 h-4 mr-2" />
                 Image
               </Button>
               <Button variant="outline" size="sm" disabled>
