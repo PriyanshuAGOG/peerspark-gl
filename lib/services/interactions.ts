@@ -1,6 +1,7 @@
 import { databases } from '../appwrite'
 import { ID, Query } from 'appwrite'
 import { COLLECTIONS, DATABASE_ID } from '../appwrite'
+import { usersService } from './users'
 
 export interface Like {
   $id: string;
@@ -14,6 +15,12 @@ export interface Bookmark {
   userId: string;
   targetId: string;
   targetType: 'post' | 'resource' | 'event';
+}
+
+export interface Follow {
+    $id: string;
+    followerId: string; // The user who is following
+    followingId: string; // The user who is being followed
 }
 
 class InteractionsService {
@@ -103,6 +110,83 @@ class InteractionsService {
           Query.equal('targetId', targetId),
       ]);
       return response.documents[0] as Bookmark || null;
+  }
+
+  // Note: Ensure a 'FOLLOWS' collection exists with string attributes: 'followerId', 'followingId'
+  async follow(followerId: string, followingId: string): Promise<Follow> {
+      try {
+          const followDoc = await databases.createDocument(
+              this.db,
+              COLLECTIONS.FOLLOWS,
+              ID.unique(),
+              { followerId, followingId }
+          );
+
+          // Update counts on user profiles
+          const followerProfile = await usersService.getProfile(followerId);
+          const followingProfile = await usersService.getProfile(followingId);
+
+          if (followerProfile) {
+              await usersService.updateProfile(followerProfile.$id, { followingCount: (followerProfile.followingCount || 0) + 1 });
+          }
+          if (followingProfile) {
+              await usersService.updateProfile(followingProfile.$id, { followersCount: (followingProfile.followersCount || 0) + 1 });
+          }
+
+          return followDoc as Follow;
+      } catch (error) {
+          console.error("Error following user:", error);
+          throw error;
+      }
+  }
+
+  async unfollow(followId: string, followerId: string, followingId: string): Promise<void> {
+      try {
+          await databases.deleteDocument(this.db, COLLECTIONS.FOLLOWS, followId);
+
+          // Update counts on user profiles
+          const followerProfile = await usersService.getProfile(followerId);
+          const followingProfile = await usersService.getProfile(followingId);
+
+          if (followerProfile) {
+              await usersService.updateProfile(followerProfile.$id, { followingCount: Math.max(0, (followerProfile.followingCount || 0) - 1) });
+          }
+          if (followingProfile) {
+              await usersService.updateProfile(followingProfile.$id, { followersCount: Math.max(0, (followingProfile.followersCount || 0) - 1) });
+          }
+      } catch (error) {
+          console.error("Error unfollowing user:", error);
+          throw error;
+      }
+  }
+
+  async isFollowing(followerId: string, followingId: string): Promise<{ isFollowing: boolean; followId: string | null }> {
+      try {
+          const response = await databases.listDocuments(this.db, COLLECTIONS.FOLLOWS, [
+              Query.equal('followerId', followerId),
+              Query.equal('followingId', followingId),
+          ]);
+          if (response.documents.length > 0) {
+              return { isFollowing: true, followId: response.documents[0].$id };
+          }
+          return { isFollowing: false, followId: null };
+      } catch (error) {
+          console.error("Error checking follow status:", error);
+          return { isFollowing: false, followId: null };
+      }
+  }
+
+  async getFollowing(userId: string): Promise<string[]> {
+      try {
+          const response = await databases.listDocuments(this.db, COLLECTIONS.FOLLOWS, [
+              Query.equal('followerId', userId),
+              Query.limit(5000) // Appwrite max limit
+          ]);
+          return response.documents.map(doc => (doc as Follow).followingId);
+      } catch (error) {
+          console.error("Error getting following list:", error);
+          return [];
+      }
   }
 }
 

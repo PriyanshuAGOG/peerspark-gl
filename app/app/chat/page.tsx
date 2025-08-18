@@ -50,7 +50,8 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { chatService, ChatRoom, ChatMessage } from "@/lib/services/chat"
-import { authService, UserProfile } from "@/lib/auth"
+import { usersService } from "@/lib/services/users"
+import { UserProfile } from "@/lib/auth"
 import { aiService } from "@/lib/services/ai"
 
 export default function ChatPage() {
@@ -80,7 +81,21 @@ export default function ChatPage() {
     const fetchRooms = async () => {
       setIsLoadingRooms(true)
       const userRooms = await chatService.getUserRooms(user.$id)
-      setRooms(userRooms)
+
+      const hydratedRooms = await Promise.all(userRooms.map(async (room) => {
+        if (room.type === 'direct' && room.participants.length === 2) {
+          const otherUserId = room.participants.find(p => p !== user.$id);
+          if (otherUserId) {
+            const otherUser = await usersService.getProfile(otherUserId);
+            if (otherUser) {
+              return { ...room, name: otherUser.displayName, avatar: otherUser.avatar };
+            }
+          }
+        }
+        return room;
+      }));
+
+      setRooms(hydratedRooms)
       setIsLoadingRooms(false)
     }
     fetchRooms()
@@ -110,7 +125,7 @@ export default function ChatPage() {
       const newAuthors: Record<string, UserProfile> = {}
       for (const id of authorIds) {
         if (!authors[id]) {
-          const authorProfile = await authService.getUserProfile(id)
+          const authorProfile = await usersService.getProfile(id)
           if (authorProfile) {
             newAuthors[id] = authorProfile
           }

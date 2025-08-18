@@ -1,6 +1,8 @@
 import { databases } from '../appwrite'
 import { ID, Query } from 'appwrite'
 import { COLLECTIONS, DATABASE_ID } from '../appwrite'
+import { usersService } from './users'
+import { achievementsService } from './achievements'
 
 export interface Quest {
   $id: string;
@@ -73,6 +75,20 @@ class QuestsService {
     }
   }
 
+  async getAllQuests(): Promise<Quest[]> {
+    try {
+      const response = await databases.listDocuments(
+        this.databaseId,
+        this.questsCollectionId,
+        [Query.limit(100)] // Adjust limit as needed
+      );
+      return response.documents as Quest[];
+    } catch (error) {
+      console.error("Error fetching all quests:", error);
+      return [];
+    }
+  }
+
   async getQuest(questId: string): Promise<Quest | null> {
       try {
           const quest = await databases.getDocument(this.databaseId, this.collectionId, questId);
@@ -100,19 +116,28 @@ class QuestsService {
 
   async submitQuest(progressId: string, submission: { answers?: string; codeSubmission?: string; score?: number }): Promise<QuestProgress> {
       try {
-          const progress = await databases.updateDocument(this.databaseId, this.progressCollectionId, progressId, {
+          const progressDoc = await databases.updateDocument(this.databaseId, this.progressCollectionId, progressId, {
               ...submission,
               status: 'completed',
               completedAt: new Date().toISOString(),
           });
 
-          // TODO: Add logic to award points and achievements
-          // For example:
-          // const quest = await this.getQuest(progress.questId);
-          // await usersService.addPoints(progress.userId, quest.points);
-          // await achievementsService.checkAndAwardQuestAchievements(progress.userId);
+          const progress = progressDoc as QuestProgress;
 
-          return progress as QuestProgress;
+          // Award points
+          const quest = await this.getQuest(progress.questId);
+          if (quest && quest.points > 0) {
+              const userProfile = await usersService.getProfile(progress.userId);
+              if (userProfile) {
+                  const newScore = (userProfile.reputationScore || 0) + quest.points;
+                  await usersService.updateProfile(userProfile.$id, { reputationScore: newScore });
+              }
+          }
+
+          // Check for achievements
+          await achievementsService.checkAndAwardQuestAchievements(progress.userId);
+
+          return progress;
       } catch (error) {
           console.error("Error submitting quest:", error);
           throw error;
@@ -133,6 +158,18 @@ class QuestsService {
           console.error("Error getting quest progress:", error);
           return null;
       }
+  }
+
+  async getAllQuestProgressForUser(userId: string): Promise<QuestProgress[]> {
+    try {
+        const response = await databases.listDocuments(this.databaseId, this.progressCollectionId, [
+            Query.equal('userId', userId),
+        ]);
+        return response.documents as QuestProgress[];
+    } catch (error) {
+        console.error("Error getting all quest progress for user:", error);
+        return [];
+    }
   }
 }
 

@@ -1,6 +1,8 @@
 import { databases } from '../appwrite'
 import { ID, Query } from 'appwrite'
 import { COLLECTIONS, DATABASE_ID } from '../appwrite'
+import { questsService } from './quests'
+import { notificationService } from './notifications'
 
 export interface Achievement {
   $id: string;
@@ -44,7 +46,7 @@ class AchievementsService {
     }
   }
 
-  async awardAchievement(userId: string, achievementId: string): Promise<UserAchievement> {
+  async awardAchievement(userId: string, achievementId: string, achievementName: string): Promise<UserAchievement> {
     try {
       // Check if user already has this achievement
       const existing = await databases.listDocuments(this.db, this.userAchievementsCollection, [
@@ -66,10 +68,42 @@ class AchievementsService {
         }
       );
       // TODO: Maybe send a notification
+      await notificationService.createNotification({
+          userId,
+          title: "Achievement Unlocked!",
+          message: `You've earned the achievement: ${achievementName}`,
+          type: 'success',
+          actionUrl: `/app/profile/${userId}?tab=achievements`
+      });
       return userAchievement as UserAchievement;
     } catch (error) {
       console.error("Error awarding achievement:", error);
       throw error;
+    }
+  }
+
+  async checkAndAwardQuestAchievements(userId: string) {
+    try {
+        const [allAchievements, userAchievements, questProgress] = await Promise.all([
+            this.getAchievements(),
+            this.getUserAchievements(userId),
+            questsService.getAllQuestProgressForUser(userId)
+        ]);
+
+        const earnedAchievementIds = new Set(userAchievements.map(ua => ua.achievementId));
+        const completedQuestsCount = questProgress.filter(p => p.status === 'completed').length;
+
+        const questAchievements = allAchievements.filter(a => a.criteria.type === 'quests_completed');
+
+        for (const achievement of questAchievements) {
+            if (!earnedAchievementIds.has(achievement.$id)) {
+                if (completedQuestsCount >= achievement.criteria.count) {
+                    await this.awardAchievement(userId, achievement.$id, achievement.name);
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Error checking for quest achievements:", error);
     }
   }
 }

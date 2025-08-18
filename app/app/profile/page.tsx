@@ -52,14 +52,23 @@ import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { ProfileSkeleton } from "@/components/profile-skeleton"
+import { PostCard } from "@/components/post-card"
+import { postsService, Post } from "@/lib/services/posts"
+import { podsService } from "@/lib/services/pods"
+import { resourcesService } from "@/lib/services/resources"
 import { questsService, QuestProgress } from "@/lib/services/quests"
 import { achievementsService, UserAchievement, Achievement } from "@/lib/services/achievements"
 
-const USER_POSTS: any[] = []
 const USER_ACTIVITY: any[] = []
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("posts")
+  const [posts, setPosts] = useState<Post[]>([])
+  const [stats, setStats] = useState({
+    pods: 0,
+    resources: 0,
+    quests: 0,
+  })
   const [isFollowing, setIsFollowing] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false)
@@ -70,6 +79,7 @@ export default function ProfilePage() {
   const [questProgress, setQuestProgress] = useState<QuestProgress[]>([])
   const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([])
   const [allAchievements, setAllAchievements] = useState<Achievement[]>([])
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
 
 
   // Profile edit state
@@ -94,9 +104,30 @@ export default function ProfilePage() {
     }
     if (user) {
         const fetchQuestProgress = async () => {
-            // This is not efficient, a dedicated method to get all progress would be better
-            // const progress = await questsService.getQuestProgressForUser(user.$id);
-            // setQuestProgress(progress);
+            const [progress, allQuests] = await Promise.all([
+                questsService.getAllQuestProgressForUser(user.$id),
+                questsService.getAllQuests()
+            ]);
+
+            setQuestProgress(progress);
+
+            const questsMap = new Map(allQuests.map(q => [q.$id, q]));
+            const recent = progress
+                .filter(p => p.status === 'completed' && p.completedAt)
+                .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())
+                .slice(0, 5)
+                .map(p => {
+                    const quest = questsMap.get(p.questId);
+                    return {
+                        id: p.$id,
+                        status: p.status,
+                        title: quest?.title || 'Unknown Quest',
+                        difficulty: quest?.difficulty || 'easy',
+                        points: quest?.points || 0,
+                        timestamp: new Date(p.completedAt!).toLocaleDateString(),
+                    }
+                });
+            setRecentActivity(recent);
         }
         const fetchAchievements = async () => {
             const [userAch, allAch] = await Promise.all([
@@ -106,8 +137,26 @@ export default function ProfilePage() {
             setUserAchievements(userAch);
             setAllAchievements(allAch);
         }
+        const fetchPosts = async () => {
+            const userPosts = await postsService.getUserPosts(user.$id);
+            setPosts(userPosts);
+        }
+        const fetchStats = async () => {
+            const [pods, resources, quests] = await Promise.all([
+                podsService.getUserPods(user.$id),
+                resourcesService.getUserResources(user.$id),
+                questsService.getAllQuestProgressForUser(user.$id)
+            ]);
+            setStats({
+                pods: pods.length,
+                resources: resources.length,
+                quests: quests.filter(q => q.status === 'completed').length
+            });
+        }
         fetchQuestProgress();
         fetchAchievements();
+        fetchPosts();
+        fetchStats();
     }
   }, [user, profile, loading, router])
 
@@ -460,7 +509,7 @@ export default function ProfilePage() {
                   <Users className="w-4 h-4 md:w-6 md:h-6 text-green-600" />
                 </div>
               </div>
-              <div className="text-lg md:text-2xl font-bold">0</div>
+              <div className="text-lg md:text-2xl font-bold">{stats.pods}</div>
               <div className="text-xs md:text-sm text-muted-foreground">Pods Joined</div>
             </CardContent>
           </Card>
@@ -472,7 +521,7 @@ export default function ProfilePage() {
                   <BookOpen className="w-4 h-4 md:w-6 md:h-6 text-purple-600" />
                 </div>
               </div>
-              <div className="text-lg md:text-2xl font-bold">0</div>
+              <div className="text-lg md:text-2xl font-bold">{stats.resources}</div>
               <div className="text-xs md:text-sm text-muted-foreground">Resources Shared</div>
             </CardContent>
           </Card>
@@ -484,7 +533,7 @@ export default function ProfilePage() {
                   <Trophy className="w-4 h-4 md:w-6 md:h-6 text-indigo-600" />
                 </div>
               </div>
-              <div className="text-lg md:text-2xl font-bold">0</div>
+              <div className="text-lg md:text-2xl font-bold">{stats.quests}</div>
               <div className="text-xs md:text-sm text-muted-foreground">Quests Done</div>
             </CardContent>
           </Card>
@@ -507,7 +556,7 @@ export default function ProfilePage() {
           <div className="border-b border-border">
             <div className="flex space-x-0">
               {[
-                { value: "posts", label: "Posts", icon: "📝", count: USER_POSTS.length },
+                { value: "posts", label: "Posts", icon: "📝", count: posts.length },
                 {
                   value: "achievements",
                   label: "Achievements",
@@ -544,80 +593,13 @@ export default function ProfilePage() {
 
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="posts" className="space-y-4">
-            {USER_POSTS.map((post) => (
-              <Card key={post.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4 md:p-6">
-                  <div className="flex items-start space-x-3 mb-3">
-                    <Avatar className="w-8 h-8 cursor-pointer" onClick={() => handlePostClick(post.author.id)}>
-                      <AvatarImage src={post.author.avatar || "/placeholder.svg"} />
-                      <AvatarFallback>{post.author.name.slice(0, 2)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <p
-                        className="font-medium text-sm cursor-pointer hover:underline"
-                        onClick={() => handlePostClick(post.author.id)}
-                      >
-                        {post.author.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{post.timestamp}</p>
-                    </div>
-                  </div>
-
-                  {post.title && <h3 className="font-semibold text-base md:text-lg mb-3">{post.title}</h3>}
-                  <div className="text-sm mb-4 whitespace-pre-wrap leading-relaxed">{post.content}</div>
-
-                  {post.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {post.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          #{tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <div className="flex items-center space-x-2 md:space-x-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleLike(post.id)}
-                        className={`${post.isLiked ? "text-red-500" : ""} hover:text-red-500 h-8 px-2 md:px-3`}
-                      >
-                        <Heart className={`w-4 h-4 mr-1 md:mr-2 ${post.isLiked ? "fill-current" : ""}`} />
-                        <span className="text-xs md:text-sm">{post.likes}</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="hover:text-blue-500 h-8 px-2 md:px-3"
-                        onClick={() => handleComment(post.id)}
-                      >
-                        <MessageSquare className="w-4 h-4 mr-1 md:mr-2" />
-                        <span className="text-xs md:text-sm">{post.comments}</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleShare(post.id)}
-                        className="hover:text-green-500 h-8 px-2 md:px-3"
-                      >
-                        <Share2 className="w-4 h-4 mr-1 md:mr-2" />
-                        <span className="text-xs md:text-sm">{post.shares}</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleBookmark(post.id)}
-                        className={`${post.isBookmarked ? "text-yellow-500" : ""} hover:text-yellow-500 h-8 px-2 md:px-3`}
-                      >
-                        <Bookmark className={`w-4 h-4 ${post.isBookmarked ? "fill-current" : ""}`} />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {posts.length > 0 ? (
+                posts.map((post) => <PostCard key={post.$id} post={post} />)
+            ) : (
+                <div className="text-center py-12">
+                    <p className="text-muted-foreground">No posts yet.</p>
+                </div>
+            )}
           </TabsContent>
 
           <TabsContent value="achievements" className="space-y-4">
@@ -765,7 +747,7 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {QUEST_PROGRESS.recentActivity.map((activity) => (
+                  {recentActivity.length > 0 ? recentActivity.map((activity) => (
                     <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg border">
                       <div className="flex items-center space-x-3">
                         {getStatusIcon(activity.status)}
@@ -784,7 +766,7 @@ export default function ProfilePage() {
                         <div className="text-xs text-muted-foreground">points</div>
                       </div>
                     </div>
-                  ))}
+                  )) : <p className="text-sm text-muted-foreground text-center py-4">No recent activity.</p>}
                 </div>
               </CardContent>
             </Card>

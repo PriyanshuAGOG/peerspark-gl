@@ -35,15 +35,25 @@ export default function FeedPage() {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("all")
+  const [sortBy, setSortBy] = useState("Latest")
   const { toast } = useToast()
   const router = useRouter()
   const { user } = useAuth()
 
   useEffect(() => {
+    if (!user) return;
+
     const fetchPosts = async () => {
       try {
         setIsLoading(true)
-        const fetchedPosts = await postsService.getFeedPosts()
+        let fetchedPosts: Post[] = [];
+        if (activeTab === 'all') {
+            fetchedPosts = await postsService.getFeedPosts();
+        } else if (activeTab === 'following') {
+            fetchedPosts = await postsService.getFollowingPosts(user.$id);
+        } else if (activeTab === 'pods') {
+            fetchedPosts = await postsService.getPodPosts(user.$id);
+        }
         setPosts(fetchedPosts)
         setError(null)
       } catch (err) {
@@ -59,7 +69,7 @@ export default function FeedPage() {
     }
 
     fetchPosts()
-  }, [])
+  }, [activeTab, user, toast])
 
   const handleLike = (postId: string) => {
     // TODO: Implement backend call for liking a post
@@ -104,23 +114,22 @@ export default function FeedPage() {
     setPosts([newPost, ...posts])
   }
 
-  const filteredPosts = posts.filter((post) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-
-    // TODO: Implement author filtering
-    // post.author.name.toLowerCase().includes(searchQuery.toLowerCase())
-
-    const matchesTab =
-      activeTab === "all" ||
-      (activeTab === "following" && Math.random() > 0.5) || // Simulate following
-      (activeTab === "pods" && post.podId)
-
-    return matchesSearch && matchesTab
-  })
+  const sortedPosts = posts
+    .filter((post) => {
+        const matchesSearch =
+        searchQuery === "" ||
+        post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+        return matchesSearch
+    })
+    .sort((a, b) => {
+        if (sortBy === 'Popular' || sortBy === 'Trending') { // TODO: Differentiate Trending
+            return (b.likesCount + b.commentsCount) - (a.likesCount + a.commentsCount);
+        }
+        // Default to Latest
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
   const renderPostSkeletons = () => (
     [...Array(5)].map((_, index) => (
@@ -183,6 +192,18 @@ export default function FeedPage() {
                   className="pl-10"
                 />
               </div>
+              <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      Sort By: {sortBy}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setSortBy('Latest')}>Latest</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortBy('Popular')}>Popular</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortBy('Trending')}>Trending</DropdownMenuItem>
+                  </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="outline" size="icon">
                 <Filter className="w-4 h-4" />
               </Button>
@@ -232,7 +253,7 @@ export default function FeedPage() {
                   </div>
                 </CardContent>
               </Card>
-            ) : filteredPosts.length === 0 ? (
+            ) : sortedPosts.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <div className="text-muted-foreground">
@@ -243,7 +264,7 @@ export default function FeedPage() {
                 </CardContent>
               </Card>
             ) : (
-              filteredPosts.map((post) => (
+              sortedPosts.map((post) => (
                 <PostCard key={post.$id} post={post} />
               ))
             )}

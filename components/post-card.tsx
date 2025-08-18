@@ -19,8 +19,7 @@ import { Post } from "@/lib/services/posts"
 import { UserProfile, useAuth } from "@/lib/auth"
 import { usersService } from "@/lib/services/users"
 import { interactionsService } from "@/lib/services/interactions"
-// TODO: Create a PodsService
-// import { podsService, Pod } from "@/lib/services/pods"
+import { podsService, Pod } from "@/lib/services/pods"
 
 interface PostCardProps {
   post: Post
@@ -28,7 +27,7 @@ interface PostCardProps {
 
 export function PostCard({ post }: PostCardProps) {
   const [author, setAuthor] = useState<UserProfile | null>(null)
-  // const [pod, setPod] = useState<Pod | null>(null)
+  const [pod, setPod] = useState<Pod | null>(null)
   const [isLiked, setIsLiked] = useState(false)
   const [likeId, setLikeId] = useState<string | null>(null)
   const [isBookmarked, setIsBookmarked] = useState(false)
@@ -59,9 +58,17 @@ export function PostCard({ post }: PostCardProps) {
         }
     }
 
+    const fetchPod = async () => {
+        if (post.podId) {
+            const podData = await podsService.getPod(post.podId);
+            setPod(podData);
+        }
+    }
+
     fetchAuthor()
     checkInteractions()
-  }, [post.authorId, post.$id, user])
+    fetchPod()
+  }, [post.authorId, post.$id, user, post.podId])
 
   const handlePostClick = (username: string) => {
     router.push(`/app/profile/${username}`)
@@ -137,17 +144,16 @@ export function PostCard({ post }: PostCardProps) {
               </div>
               <div className="flex items-center space-x-2 text-xs text-muted-foreground">
                 <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                {post.podId && (
+                {pod && (
                   <>
                     <span>•</span>
                     <Badge
                       variant="outline"
                       className="text-xs cursor-pointer hover:bg-muted"
-                      onClick={() => router.push(`/app/pods/${post.podId}`)}
+                      onClick={() => router.push(`/app/pods/${pod.$id}`)}
                     >
                       <Users className="w-3 h-3 mr-1" />
-                      {/* {pod ? pod.name : 'Pod'} */}
-                      Pod Name
+                      {pod.name}
                     </Badge>
                   </>
                 )}

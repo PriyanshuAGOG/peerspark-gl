@@ -1,6 +1,8 @@
 import { databases } from '../appwrite'
 import { ID, Query } from 'appwrite'
 import { COLLECTIONS, DATABASE_ID } from '../appwrite'
+import { interactionsService } from './interactions'
+import { podsService } from './pods'
 
 export interface Post {
   $id: string
@@ -228,6 +230,53 @@ class PostsService {
     } catch (error) {
       console.error('Error fetching trending posts:', error)
       return []
+    }
+  }
+
+  async getFollowingPosts(userId: string, limit: number = 20): Promise<Post[]> {
+    try {
+        const followingIds = await interactionsService.getFollowing(userId);
+        if (followingIds.length === 0) {
+            return [];
+        }
+
+        const response = await databases.listDocuments(
+            this.databaseId,
+            this.collectionId,
+            [
+                Query.equal('authorId', followingIds),
+                Query.orderDesc('createdAt'),
+                Query.limit(limit)
+            ]
+        );
+        return response.documents.map(doc => this.parsePost(doc as any));
+    } catch (error) {
+        console.error('Error fetching following posts:', error);
+        return [];
+    }
+  }
+
+  async getPodPosts(userId: string, limit: number = 20): Promise<Post[]> {
+    try {
+        const userPods = await podsService.getUserPods(userId);
+        if (userPods.length === 0) {
+            return [];
+        }
+        const podIds = userPods.map(p => p.$id);
+
+        const response = await databases.listDocuments(
+            this.databaseId,
+            this.collectionId,
+            [
+                Query.equal('podId', podIds),
+                Query.orderDesc('createdAt'),
+                Query.limit(limit)
+            ]
+        );
+        return response.documents.map(doc => this.parsePost(doc as any));
+    } catch (error) {
+        console.error('Error fetching pod posts:', error);
+        return [];
     }
   }
 
