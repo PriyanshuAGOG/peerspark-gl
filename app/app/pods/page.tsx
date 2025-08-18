@@ -33,6 +33,7 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { podsService, Pod } from "@/lib/services/pods"
+import { aiService } from "@/lib/services/ai"
 
 // TODO: Fetch categories from backend
 const CATEGORIES: any[] = []
@@ -195,31 +196,18 @@ export default function PodsPage() {
     }
 
     try {
-      // Call the backend API
-      const response = await fetch("/api/pods/schedule/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          podId: schedulerForm.podId,
-          subject: schedulerForm.subject,
-          duration: Number.parseInt(schedulerForm.duration),
-          dailyStudyTime: Number.parseInt(schedulerForm.dailyStudyTime),
-          reminderTime: schedulerForm.reminderTime,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to generate schedule")
-      }
-
-      const data = await response.json()
+        const roadmap = await aiService.generateStudyPlan({
+            subject: schedulerForm.subject,
+            duration: Number.parseInt(schedulerForm.duration),
+            dailyStudyTime: Number.parseInt(schedulerForm.dailyStudyTime),
+            difficulty: 'intermediate' // This should be dynamic
+        });
 
       toast({
         title: "Schedule Generated!",
-        description: `AI-powered roadmap created for ${schedulerForm.subject}. Check your calendar for daily tasks.`,
+        description: `AI-powered roadmap created for ${schedulerForm.subject}.`,
       })
+      console.log(roadmap); // For now, just log the roadmap
 
       // Reset form and close dialog
       setSchedulerForm({
@@ -231,8 +219,6 @@ export default function PodsPage() {
       })
       setIsSchedulerDialogOpen(false)
 
-      // Navigate to calendar view
-      router.push(`/app/calendar?pod=${schedulerForm.podId}`)
     } catch (error) {
       toast({
         title: "Error",

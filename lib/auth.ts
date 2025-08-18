@@ -1,5 +1,6 @@
 import { Client, Account, ID, Models, Databases, Query } from 'appwrite'
 import { databases, account, DATABASE_ID, COLLECTIONS } from './appwrite'
+import { usersService } from './services/users'
 
 export interface UserProfile extends Models.Document {
   userId: string
@@ -135,28 +136,7 @@ export class AuthService {
 
   // Get user profile from database
   async getUserProfile(userId: string): Promise<UserProfile | null> {
-    try {
-      const response = await databases.listDocuments(
-        DATABASE_ID,
-        COLLECTIONS.USERS,
-        [
-          Query.equal('userId', userId)
-        ]
-      )
-
-      if (response.documents.length > 0) {
-        const profile = response.documents[0] as UserProfile
-        // Parse JSON fields
-        profile.skills = JSON.parse(profile.skills as any || '[]')
-        profile.interests = JSON.parse(profile.interests as any || '[]')
-        profile.subjects = JSON.parse(profile.subjects as any || '[]')
-        return profile
-      }
-      return null
-    } catch (error) {
-      console.error('Error fetching user profile:', error)
-      return null
-    }
+    return usersService.getProfile(userId);
   }
 
   // Update user profile

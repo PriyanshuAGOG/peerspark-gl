@@ -51,6 +51,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { chatService, ChatRoom, ChatMessage } from "@/lib/services/chat"
 import { authService, UserProfile } from "@/lib/auth"
+import { aiService } from "@/lib/services/ai"
 
 export default function ChatPage() {
   const [rooms, setRooms] = useState<ChatRoom[]>([])
@@ -132,18 +133,26 @@ export default function ChatPage() {
   const handleSendMessage = async () => {
     if (!inputValue.trim() || !selectedRoom || !user || isLoading) return
 
-    setIsLoading(true)
+    const messageToSend = inputValue;
+    setInputValue("")
+
     try {
-      await chatService.sendMessage(selectedRoom.roomId, user.$id, inputValue)
-      setInputValue("")
+      await chatService.sendMessage(selectedRoom.roomId, user.$id, messageToSend)
+
+      if (messageToSend.includes("@ai")) {
+        setIsLoading(true)
+        const aiResponse = await aiService.getAIResponseForChat(messageToSend);
+        await chatService.sendMessage(selectedRoom.roomId, 'ai-assistant', aiResponse);
+        setIsLoading(false)
+      }
+
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to send message.",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
+      setInputValue(messageToSend); // Restore input on error
     }
   }
 

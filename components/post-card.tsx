@@ -16,7 +16,9 @@ import { Heart, MessageCircle, Share2, Bookmark, Users, MoreHorizontal, User, Fl
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { Post } from "@/lib/services/posts"
-import { authService, UserProfile } from "@/lib/auth"
+import { UserProfile, useAuth } from "@/lib/auth"
+import { usersService } from "@/lib/services/users"
+import { interactionsService } from "@/lib/services/interactions"
 // TODO: Create a PodsService
 // import { podsService, Pod } from "@/lib/services/pods"
 
@@ -27,40 +29,76 @@ interface PostCardProps {
 export function PostCard({ post }: PostCardProps) {
   const [author, setAuthor] = useState<UserProfile | null>(null)
   // const [pod, setPod] = useState<Pod | null>(null)
-  const [isLiked, setIsLiked] = useState(false) // TODO: Get from user's likes
-  const [isBookmarked, setIsBookmarked] = useState(false) // TODO: Get from user's bookmarks
+  const [isLiked, setIsLiked] = useState(false)
+  const [likeId, setLikeId] = useState<string | null>(null)
+  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [bookmarkId, setBookmarkId] = useState<string | null>(null)
   const router = useRouter()
   const { toast } = useToast()
+  const { user } = useAuth()
 
   useEffect(() => {
     const fetchAuthor = async () => {
       if (post.authorId) {
-        const authorProfile = await authService.getUserProfile(post.authorId)
+        const authorProfile = await usersService.getProfile(post.authorId)
         setAuthor(authorProfile)
       }
     }
-    /*
-    const fetchPod = async () => {
-      if (post.podId) {
-        // const podDetails = await podsService.getPod(post.podId)
-        // setPod(podDetails)
-      }
+
+    const checkInteractions = async () => {
+        if (!user) return;
+        const like = await interactionsService.getLike(user.$id, post.$id);
+        if (like) {
+            setIsLiked(true);
+            setLikeId(like.$id);
+        }
+        const bookmark = await interactionsService.getBookmark(user.$id, post.$id);
+        if (bookmark) {
+            setIsBookmarked(true);
+            setBookmarkId(bookmark.$id);
+        }
     }
-    */
 
     fetchAuthor()
-    // fetchPod()
-  }, [post.authorId, post.podId])
+    checkInteractions()
+  }, [post.authorId, post.$id, user])
 
   const handlePostClick = (username: string) => {
     router.push(`/app/profile/${username}`)
   }
 
-  const handleInteraction = (interaction: 'like' | 'bookmark' | 'share' | 'comment' | 'report') => {
-    toast({
-      title: "Coming Soon!",
-      description: `The '${interaction}' feature is under development.`,
-    })
+  const handleInteraction = async (interaction: 'like' | 'bookmark' | 'share' | 'comment' | 'report') => {
+    if (!user) {
+        toast({ title: "Please login to interact", variant: "destructive" });
+        return;
+    }
+
+    if (interaction === 'like') {
+        if (isLiked && likeId) {
+            await interactionsService.unlike(likeId, post.$id, 'post');
+            setIsLiked(false);
+            setLikeId(null);
+        } else {
+            const newLike = await interactionsService.like(user.$id, post.$id, 'post');
+            setIsLiked(true);
+            setLikeId(newLike.$id);
+        }
+    } else if (interaction === 'bookmark') {
+        if (isBookmarked && bookmarkId) {
+            await interactionsService.unbookmark(bookmarkId, post.$id, 'post');
+            setIsBookmarked(false);
+            setBookmarkId(null);
+        } else {
+            const newBookmark = await interactionsService.bookmark(user.$id, post.$id, 'post');
+            setIsBookmarked(true);
+            setBookmarkId(newBookmark.$id);
+        }
+    } else {
+        toast({
+            title: "Coming Soon!",
+            description: `The '${interaction}' feature is under development.`,
+        })
+    }
   }
 
   if (!author) {

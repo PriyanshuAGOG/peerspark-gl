@@ -52,82 +52,9 @@ import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { ProfileSkeleton } from "@/components/profile-skeleton"
+import { questsService, QuestProgress } from "@/lib/services/quests"
+import { achievementsService, UserAchievement, Achievement } from "@/lib/services/achievements"
 
-// TODO: Replace with data from services
-const QUEST_PROGRESS = {
-  currentStreak: 0,
-  longestStreak: 0,
-  weeklyStats: {
-    tasksCompleted: 18,
-    tasksTotal: 21,
-    quizzesCompleted: 12,
-    quizzesTotal: 14,
-    questsCompleted: 5,
-    questsTotal: 7,
-  },
-  monthlyProgress: [
-    { month: "Jan", completed: 85, total: 100 },
-    { month: "Feb", completed: 92, total: 100 },
-    { month: "Mar", completed: 78, total: 100 },
-    { month: "Apr", completed: 95, total: 100 },
-  ],
-  recentActivity: [
-    {
-      id: "1",
-      type: "quest",
-      title: "React Hooks Deep Dive",
-      status: "completed",
-      points: 150,
-      timestamp: "2 hours ago",
-      difficulty: "Advanced",
-    },
-    {
-      id: "2",
-      type: "quiz",
-      title: "JavaScript Fundamentals Quiz",
-      status: "completed",
-      points: 75,
-      timestamp: "1 day ago",
-      difficulty: "Intermediate",
-    },
-    {
-      id: "3",
-      type: "task",
-      title: "Daily Reading: System Design",
-      status: "completed",
-      points: 25,
-      timestamp: "1 day ago",
-      difficulty: "Beginner",
-    },
-    {
-      id: "4",
-      type: "quest",
-      title: "Build a REST API",
-      status: "in-progress",
-      points: 200,
-      timestamp: "2 days ago",
-      difficulty: "Advanced",
-    },
-    {
-      id: "5",
-      type: "task",
-      title: "Code Review Practice",
-      status: "missed",
-      points: 50,
-      timestamp: "3 days ago",
-      difficulty: "Intermediate",
-    },
-  ],
-  skillProgress: [
-    { skill: "React", level: 8, progress: 75, totalXP: 1200 },
-    { skill: "Node.js", level: 6, progress: 40, totalXP: 850 },
-    { skill: "System Design", level: 4, progress: 60, totalXP: 420 },
-    { skill: "TypeScript", level: 7, progress: 20, totalXP: 980 },
-    { skill: "Database Design", level: 5, progress: 80, totalXP: 640 },
-  ],
-}
-
-const USER_ACHIEVEMENTS: any[] = []
 const USER_POSTS: any[] = []
 const USER_ACTIVITY: any[] = []
 
@@ -140,6 +67,10 @@ export default function ProfilePage() {
   const router = useRouter()
   const { user, profile, loading, updateProfile } = useAuth()
   const [isOwnProfile, setIsOwnProfile] = useState(true)
+  const [questProgress, setQuestProgress] = useState<QuestProgress[]>([])
+  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([])
+  const [allAchievements, setAllAchievements] = useState<Achievement[]>([])
+
 
   // Profile edit state
   const [profileData, setProfileData] = useState({
@@ -160,6 +91,23 @@ export default function ProfilePage() {
         location: profile.location || "",
         website: profile.website || "",
       })
+    }
+    if (user) {
+        const fetchQuestProgress = async () => {
+            // This is not efficient, a dedicated method to get all progress would be better
+            // const progress = await questsService.getQuestProgressForUser(user.$id);
+            // setQuestProgress(progress);
+        }
+        const fetchAchievements = async () => {
+            const [userAch, allAch] = await Promise.all([
+                achievementsService.getUserAchievements(user.$id),
+                achievementsService.getAchievements()
+            ]);
+            setUserAchievements(userAch);
+            setAllAchievements(allAch);
+        }
+        fetchQuestProgress();
+        fetchAchievements();
     }
   }, [user, profile, loading, router])
 
@@ -674,37 +622,28 @@ export default function ProfilePage() {
 
           <TabsContent value="achievements" className="space-y-4">
             <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {USER_ACHIEVEMENTS.map((achievement) => (
-                <Card
-                  key={achievement.id}
-                  className={`${achievement.earned ? "border-yellow-200 bg-yellow-50/50 dark:bg-yellow-900/10" : "opacity-75"}`}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="text-2xl">{achievement.icon}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-sm">{achievement.title}</h4>
-                          <Badge
-                            variant={achievement.earned ? "default" : "secondary"}
-                            className={`text-xs ${getRarityColor(achievement.rarity)}`}
-                          >
-                            {achievement.rarity}
-                          </Badge>
+              {allAchievements.map((achievement) => {
+                const userAchievement = userAchievements.find(ua => ua.achievementId === achievement.$id);
+                const earned = !!userAchievement;
+                return (
+                    <Card
+                        key={achievement.$id}
+                        className={`${earned ? "border-yellow-200 bg-yellow-50/50 dark:bg-yellow-900/10" : "opacity-75"}`}
+                    >
+                        <CardContent className="p-4">
+                        <div className="flex items-start space-x-3">
+                            <div className="text-2xl">{achievement.icon}</div>
+                            <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-semibold text-sm">{achievement.name}</h4>
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-3">{achievement.description}</p>
+                            </div>
                         </div>
-                        <p className="text-xs text-muted-foreground mb-3">{achievement.description}</p>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span>Progress</span>
-                            <span>{achievement.progress}%</span>
-                          </div>
-                          <Progress value={achievement.progress} className="h-2" />
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                        </CardContent>
+                    </Card>
+                )
+              })}
             </div>
           </TabsContent>
 

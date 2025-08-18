@@ -34,6 +34,9 @@ export const COLLECTIONS = {
   CHAT_ROOMS: process.env.NEXT_PUBLIC_APPWRITE_CHAT_ROOMS_COLLECTION_ID!,
   ANALYTICS: process.env.NEXT_PUBLIC_APPWRITE_ANALYTICS_COLLECTION_ID!,
   QUESTS: process.env.NEXT_PUBLIC_APPWRITE_QUESTS_COLLECTION_ID!,
+  QUEST_PROGRESS: "quest-progress",
+  ACHIEVEMENTS: "achievements",
+  USER_ACHIEVEMENTS: "user-achievements",
   PUSH_SUBSCRIPTIONS: "push-subscriptions-collection", // This was missing in the guide's env vars
 }
 
