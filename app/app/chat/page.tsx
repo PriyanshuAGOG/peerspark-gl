@@ -145,6 +145,15 @@ export default function ChatPage() {
     scrollToBottom()
   }, [messages, scrollToBottom])
 
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${scrollHeight}px`;
+    }
+  }, [inputValue]);
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || !selectedRoom || !user || isLoading) return
 
@@ -461,7 +470,7 @@ export default function ChatPage() {
               style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
             >
               <div className="max-w-4xl mx-auto">
-                <div className="flex gap-2 items-end">
+                <div className="flex gap-2 items-center">
                   <div className="flex-1 relative">
                     <Textarea
                       ref={textareaRef}

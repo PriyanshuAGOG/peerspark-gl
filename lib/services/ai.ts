@@ -1,5 +1,4 @@
-// This service would interact with an AI provider like OpenAI.
-// For this example, we will simulate the AI response.
+import { functions } from '../appwrite';
 
 interface StudyPlanRequest {
   subject: string;
@@ -44,9 +43,30 @@ class AIService {
   }
 
   async getAIResponseForChat(prompt: string): Promise<string> {
-      console.log("Getting AI chat response for prompt:", prompt);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return `This is a simulated AI response to: "${prompt}"`;
+    try {
+        const functionId = process.env.NEXT_PUBLIC_APPWRITE_AI_CHAT_FUNCTION_ID!;
+        if (!functionId) {
+            throw new Error("AI chat function ID is not configured.");
+        }
+
+        const result = await functions.createExecution(
+            functionId,
+            JSON.stringify({ prompt }),
+            false // async
+        );
+
+        if (result.status === 'completed') {
+            const response = JSON.parse(result.response);
+            return response.response || "Sorry, I couldn't process that.";
+        } else {
+            // You might want to implement polling here to wait for async functions
+            console.error("AI function execution failed or timed out:", result.stderr);
+            return "The AI assistant is taking too long to respond. Please try again later.";
+        }
+    } catch (error) {
+        console.error("Error calling AI chat function:", error);
+        return "There was an error communicating with the AI assistant.";
+    }
   }
 }
 

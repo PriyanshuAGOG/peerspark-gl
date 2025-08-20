@@ -126,7 +126,7 @@ export function NotificationCenter() {
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-96 bg-background border rounded-lg shadow-lg z-50">
+        <div className="absolute top-full mt-2 w-[calc(100vw-2rem)] right-1/2 translate-x-1/2 sm:right-0 sm:translate-x-0 sm:w-96 bg-background border rounded-lg shadow-lg z-50">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex items-center justify-between p-4 border-b">
               <TabsList className="grid w-full grid-cols-2">

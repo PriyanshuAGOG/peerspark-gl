@@ -177,6 +177,12 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.0.0
+      dotenv:
+        specifier: ^17.2.1
+        version: 17.2.1
+      node-appwrite:
+        specifier: ^17.2.0
+        version: 17.2.0
       postcss:
         specifier: ^8.5
         version: 8.5.0
@@ -1588,6 +1594,10 @@ packages:
   detect-node-es@1.1.0:
     resolution: {integrity: sha512-ypdmJU/TbBby2Dxibuv7ZLW3Bs1QEmM7nHjEANfohJLvE0XVujisn1qPJcZxg+qDucsr+bP6fLD1rPS3AhJ7EQ==}
 
+  dotenv@17.2.1:
+    resolution: {integrity: sha512-kQhDYKZecqnM0fCnzI5eIv5L4cAe/iRI+HqMbO/hbRdTAeXDG+M9FjipUxNfbARuEg4iHIbhnhs78BCHNbSxEQ==}
+    engines: {node: '>=12'}
+
   electron-to-chromium@1.5.203:
     resolution: {integrity: sha512-uz4i0vLhfm6dLZWbz/iH88KNDV+ivj5+2SA+utpgjKaj9Q0iDLuwk6Idhe9BTxciHudyx6IvTvijhkPvFGUQ0g==}
 
@@ -1779,6 +1789,12 @@ packages:
         optional: true
       sass:
         optional: true
+
+  node-appwrite@17.2.0:
+    resolution: {integrity: sha512-naYUsVZEdF6YKF/q/s0DBQkAHJj2RhEWwmcXrkbfAAPc3Bn+D3CCftBqyNWeo17JBCoYWqQEgT2Od9xOVQR26A==}
+
+  node-fetch-native-with-agent@1.7.2:
+    resolution: {integrity: sha512-5MaOOCuJEvcckoz7/tjdx1M6OusOY6Xc5f459IaruGStWnKzlI1qpNgaAwmn4LmFYcsSlj+jBMk84wmmRxfk5g==}
 
   node-releases@2.0.19:
     resolution: {integrity: sha512-xxOWJsBKtzAq7DY0J+DTzuz58K8e7sJbdgwkbMWQe8UYB6ekmsQ45q0M/tJDsGaZmbC+l7n57UV8Hl5tHxO9uw==}
@@ -3383,6 +3399,8 @@ snapshots:
 
   detect-node-es@1.1.0: {}
 
+  dotenv@17.2.1: {}
+
   electron-to-chromium@1.5.203: {}
 
   embla-carousel-react@8.5.1(react@19.0.0):
@@ -3540,6 +3558,12 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
+
+  node-appwrite@17.2.0:
+    dependencies:
+      node-fetch-native-with-agent: 1.7.2
+
+  node-fetch-native-with-agent@1.7.2: {}
 
   node-releases@2.0.19: {}
 

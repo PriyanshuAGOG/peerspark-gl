@@ -59,7 +59,8 @@ import { podsService, Pod } from "@/lib/services/pods"
 import { useAuth } from "@/contexts/auth-context"
 import { jitsiService } from "@/lib/video-call"
 
-// Custom Pod Navigation Component - Only show on mobile
+// --- Helper Components (kept separate for clarity) ---
+
 function PodNavigation({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (tab: string) => void }) {
   const navItems = [
     { id: "overview", label: "Overview", icon: Home },
@@ -110,7 +111,6 @@ function DailyTasksComponent({ podId }: { podId: string }) {
     const fetchQuests = async () => {
       setIsLoading(true)
       const quests = await questsService.getQuestsForPod(podId)
-      // This is a simplified logic. A real app would have a way to determine today's tasks.
       setDailyLesson(quests.find(q => q.type === 'lesson') || null)
       setDailyQuiz(quests.find(q => q.type === 'quiz') || null)
       setDailyQuest(quests.find(q => q.type === 'quest') || null)
@@ -119,13 +119,26 @@ function DailyTasksComponent({ podId }: { podId: string }) {
     fetchQuests()
   }, [podId])
 
-
-  if (isLoading) return <div>Loading tasks...</div>
-  if (!dailyLesson || !dailyQuiz || !dailyQuest) return <div>Today's tasks not available yet.</div>
-
   // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout
+    const handleQuizSubmit = () => {
+        if (!dailyQuiz) return;
+        setIsTimerRunning(false)
+        setQuizSubmitted(true)
+
+        const questions = JSON.parse(dailyQuiz.questions || '[]')
+        const correctAnswers = questions.filter((q: any) => quizAnswers[q.id] === q.correct).length
+
+        const score = Math.round((correctAnswers / questions.length) * 100)
+        const points = Math.round((score / 100) * dailyQuiz.points)
+
+        toast({
+        title: "Quiz Completed!",
+        description: `You scored ${score}% and earned ${points} points!`,
+        })
+    }
+
     if (isTimerRunning && timerSeconds > 0) {
       interval = setInterval(() => {
         setTimerSeconds((prev) => prev - 1)
@@ -137,60 +150,11 @@ function DailyTasksComponent({ podId }: { podId: string }) {
       }
     }
     return () => clearInterval(interval)
-  }, [isTimerRunning, timerSeconds, activeTaskTab, quizSubmitted, handleQuizSubmit])
+  }, [isTimerRunning, timerSeconds, activeTaskTab, quizSubmitted, dailyQuiz, quizAnswers, toast])
 
-  const startQuiz = () => {
-    if (!dailyQuiz || !dailyQuiz.timeLimit) return;
-    setTimerSeconds(dailyQuiz.timeLimit * 60)
-    setIsTimerRunning(true)
-    setCurrentQuizQuestion(0)
-    setQuizAnswers({})
-    setQuizSubmitted(false)
-  }
 
-  const handleQuizAnswer = (questionId: number, answer: string) => {
-    setQuizAnswers((prev) => ({ ...prev, [questionId]: answer }))
-  }
-
-  function handleQuizSubmit() {
-    if (!dailyQuiz) return;
-    setIsTimerRunning(false)
-    setQuizSubmitted(true)
-
-    const questions = JSON.parse(dailyQuiz.questions || '[]')
-    const correctAnswers = questions.filter((q: any) => quizAnswers[q.id] === q.correct).length
-
-    const score = Math.round((correctAnswers / questions.length) * 100)
-    const points = Math.round((score / 100) * dailyQuiz.points)
-
-    toast({
-      title: "Quiz Completed!",
-      description: `You scored ${score}% and earned ${points} points!`,
-    })
-  }
-
-  const handleQuestSubmit = () => {
-    if (!questCode.trim()) {
-      toast({
-        title: "Code Required",
-        description: "Please write your solution before submitting.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setQuestSubmitted(true)
-    toast({
-      title: "Quest Submitted!",
-      description: "Your solution has been submitted for review. You'll receive feedback soon!",
-    })
-  }
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, "0")}`
-  }
+  if (isLoading) return <div>Loading tasks...</div>
+  if (!dailyLesson || !dailyQuiz || !dailyQuest) return <div>Today's tasks not available yet.</div>
 
   return (
     <div className="space-y-4">
@@ -199,7 +163,10 @@ function DailyTasksComponent({ podId }: { podId: string }) {
   )
 }
 
-function PodPageComponent() {
+
+// --- Main Page Component ---
+
+export default function PodPage() {
   const [activeTab, setActiveTab] = useState("overview")
   const [pod, setPod] = useState<Pod | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -244,8 +211,4 @@ function PodPageComponent() {
         {/* ... rest of the PodPage JSX using `pod` state ... */}
     </div>
   )
-}
-
-export default function PodPage() {
-  return <PodPageComponent />
 }

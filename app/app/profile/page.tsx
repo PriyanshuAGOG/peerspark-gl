@@ -880,11 +880,11 @@ export default function ProfilePage() {
               </Button>
             </div>
             <div>
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="displayName">Name</Label>
               <Input
-                id="name"
-                value={profileData.name}
-                onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                id="displayName"
+                value={profileData.displayName}
+                onChange={(e) => setProfileData({ ...profileData, displayName: e.target.value })}
               />
             </div>
             <div>
@@ -941,31 +941,34 @@ export default function ProfilePage() {
               </h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Public Profile</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="privacy-public-profile">Public Profile</Label>
                     <p className="text-sm text-muted-foreground">Allow others to find and view your profile</p>
                   </div>
                   <Switch
+                    id="privacy-public-profile"
                     checked={privacySettings.profilePublic}
                     onCheckedChange={(checked) => setPrivacySettings({ ...privacySettings, profilePublic: checked })}
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Show Study Statistics</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="privacy-show-stats">Show Study Statistics</Label>
                     <p className="text-sm text-muted-foreground">Display your study hours and streaks</p>
                   </div>
                   <Switch
+                    id="privacy-show-stats"
                     checked={privacySettings.showStudyStats}
                     onCheckedChange={(checked) => setPrivacySettings({ ...privacySettings, showStudyStats: checked })}
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Allow Pod Invitations</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="privacy-allow-invites">Allow Pod Invitations</Label>
                     <p className="text-sm text-muted-foreground">Let others invite you to study pods</p>
                   </div>
                   <Switch
+                    id="privacy-allow-invites"
                     checked={privacySettings.allowPodInvites}
                     onCheckedChange={(checked) => setPrivacySettings({ ...privacySettings, allowPodInvites: checked })}
                   />
@@ -981,11 +984,12 @@ export default function ProfilePage() {
               </h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Email Notifications</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="notifications-email">Email Notifications</Label>
                     <p className="text-sm text-muted-foreground">Receive notifications via email</p>
                   </div>
                   <Switch
+                    id="notifications-email"
                     checked={notificationSettings.emailNotifications}
                     onCheckedChange={(checked) =>
                       setNotificationSettings({ ...notificationSettings, emailNotifications: checked })
@@ -993,11 +997,12 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Push Notifications</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="notifications-push">Push Notifications</Label>
                     <p className="text-sm text-muted-foreground">Receive push notifications</p>
                   </div>
                   <Switch
+                    id="notifications-push"
                     checked={notificationSettings.pushNotifications}
                     onCheckedChange={(checked) =>
                       setNotificationSettings({ ...notificationSettings, pushNotifications: checked })
@@ -1005,11 +1010,12 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Pod Updates</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="notifications-pod-updates">Pod Updates</Label>
                     <p className="text-sm text-muted-foreground">Notifications about pod activities</p>
                   </div>
                   <Switch
+                    id="notifications-pod-updates"
                     checked={notificationSettings.podUpdates}
                     onCheckedChange={(checked) =>
                       setNotificationSettings({ ...notificationSettings, podUpdates: checked })
