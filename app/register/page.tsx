@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress"
 import { Eye, EyeOff, Github, Mail, Zap, Check, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -25,6 +26,7 @@ export default function RegisterPage() {
   })
   const router = useRouter()
   const { toast } = useToast()
+  const { register, loginWithOAuth } = useAuth()
 
   const getPasswordStrength = (password: string) => {
     let strength = 0
@@ -59,22 +61,31 @@ export default function RegisterPage() {
 
     setIsLoading(true)
 
-    // Simulate registration
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+      const nameParts = formData.name.split(" ")
+      const firstName = nameParts[0]
+      const lastName = nameParts.slice(1).join(" ") || firstName
+      const username = formData.name.toLowerCase().replace(/[^a-z0-9]/g, "") + Math.floor(Math.random() * 1000)
+
+      await register(formData.email, formData.password, firstName, lastName, username)
       toast({
         title: "Account created!",
-        description: "Welcome to PeerSpark. Let's get you started.",
+        description: "Welcome to PeerSpark. Redirecting you to the dashboard.",
       })
-      router.push("/onboarding")
-    }, 1000)
+      router.push("/app/dashboard")
+    } catch (error: any) {
+      toast({
+        title: "Registration Failed",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleOAuthRegister = (provider: string) => {
-    toast({
-      title: `${provider} Registration`,
-      description: `Redirecting to ${provider} authentication...`,
-    })
+  const handleOAuthRegister = (provider: 'google' | 'github' | 'discord') => {
+    loginWithOAuth(provider)
   }
 
   return (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import {
   MapPin,
   Calendar,
-  LinkIcon,
+  Link as LinkIcon,
   Edit,
   MessageSquare,
   UserPlus,
@@ -50,259 +50,115 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
+import { ProfileSkeleton } from "@/components/profile-skeleton"
+import { PostCard } from "@/components/post-card"
+import { postsService, Post } from "@/lib/services/posts"
+import { podsService } from "@/lib/services/pods"
+import { resourcesService } from "@/lib/services/resources"
+import { questsService, QuestProgress } from "@/lib/services/quests"
+import { achievementsService, UserAchievement, Achievement } from "@/lib/services/achievements"
 
-const USER_PROFILE = {
-  name: "Alex Johnson",
-  username: "@alex_codes",
-  avatar: "/placeholder.svg?height=120&width=120",
-  bio: "Full-stack developer passionate about learning and sharing knowledge. Currently diving deep into system design and distributed systems.",
-  location: "San Francisco, CA",
-  website: "alexjohnson.dev",
-  joinedDate: "March 2023",
-  followers: 1247,
-  following: 892,
-  isFollowing: false,
-  stats: {
-    studyStreak: 45,
-    totalHours: 324,
-    podsJoined: 8,
-    resourcesShared: 23,
-    postsCreated: 67,
-    helpfulVotes: 189,
-    questsCompleted: 127,
-    dailyTasksCompleted: 89,
-    totalPoints: 2450,
-    currentLevel: 12,
-    weeklyGoalProgress: 78,
-  },
-}
-
-const QUEST_PROGRESS = {
-  currentStreak: 15,
-  longestStreak: 45,
-  weeklyStats: {
-    tasksCompleted: 18,
-    tasksTotal: 21,
-    quizzesCompleted: 12,
-    quizzesTotal: 14,
-    questsCompleted: 5,
-    questsTotal: 7,
-  },
-  monthlyProgress: [
-    { month: "Jan", completed: 85, total: 100 },
-    { month: "Feb", completed: 92, total: 100 },
-    { month: "Mar", completed: 78, total: 100 },
-    { month: "Apr", completed: 95, total: 100 },
-  ],
-  recentActivity: [
-    {
-      id: "1",
-      type: "quest",
-      title: "React Hooks Deep Dive",
-      status: "completed",
-      points: 150,
-      timestamp: "2 hours ago",
-      difficulty: "Advanced",
-    },
-    {
-      id: "2",
-      type: "quiz",
-      title: "JavaScript Fundamentals Quiz",
-      status: "completed",
-      points: 75,
-      timestamp: "1 day ago",
-      difficulty: "Intermediate",
-    },
-    {
-      id: "3",
-      type: "task",
-      title: "Daily Reading: System Design",
-      status: "completed",
-      points: 25,
-      timestamp: "1 day ago",
-      difficulty: "Beginner",
-    },
-    {
-      id: "4",
-      type: "quest",
-      title: "Build a REST API",
-      status: "in-progress",
-      points: 200,
-      timestamp: "2 days ago",
-      difficulty: "Advanced",
-    },
-    {
-      id: "5",
-      type: "task",
-      title: "Code Review Practice",
-      status: "missed",
-      points: 50,
-      timestamp: "3 days ago",
-      difficulty: "Intermediate",
-    },
-  ],
-  skillProgress: [
-    { skill: "React", level: 8, progress: 75, totalXP: 1200 },
-    { skill: "Node.js", level: 6, progress: 40, totalXP: 850 },
-    { skill: "System Design", level: 4, progress: 60, totalXP: 420 },
-    { skill: "TypeScript", level: 7, progress: 20, totalXP: 980 },
-    { skill: "Database Design", level: 5, progress: 80, totalXP: 640 },
-  ],
-}
-
-const USER_ACHIEVEMENTS = [
-  {
-    id: "1",
-    title: "Study Streak Master",
-    description: "Maintained a 30+ day study streak",
-    icon: "🔥",
-    earned: true,
-    progress: 100,
-    rarity: "Epic",
-  },
-  {
-    id: "2",
-    title: "Knowledge Sharer",
-    description: "Shared 20+ helpful resources",
-    icon: "📚",
-    earned: true,
-    progress: 100,
-    rarity: "Rare",
-  },
-  {
-    id: "3",
-    title: "Community Helper",
-    description: "Received 100+ helpful votes",
-    icon: "🤝",
-    earned: true,
-    progress: 100,
-    rarity: "Rare",
-  },
-  {
-    id: "4",
-    title: "Pod Leader",
-    description: "Successfully led a study pod",
-    icon: "👑",
-    earned: false,
-    progress: 75,
-    rarity: "Legendary",
-  },
-  {
-    id: "5",
-    title: "Mentor",
-    description: "Helped 50+ students achieve their goals",
-    icon: "🎓",
-    earned: false,
-    progress: 60,
-    rarity: "Epic",
-  },
-  {
-    id: "6",
-    title: "Code Warrior",
-    description: "Solved 500+ coding problems",
-    icon: "⚔️",
-    earned: false,
-    progress: 45,
-    rarity: "Legendary",
-  },
-  {
-    id: "7",
-    title: "Quest Master",
-    description: "Completed 100+ coding quests",
-    icon: "🏆",
-    earned: true,
-    progress: 100,
-    rarity: "Epic",
-  },
-  {
-    id: "8",
-    title: "Daily Warrior",
-    description: "Completed daily tasks for 7 days straight",
-    icon: "⚡",
-    earned: true,
-    progress: 100,
-    rarity: "Rare",
-  },
-]
-
-const USER_POSTS = [
-  {
-    id: "1",
-    title: "My Journey Learning System Design",
-    content:
-      "After 6 months of consistent study, I finally feel confident about system design interviews. Here's what worked for me:\n\n1. Started with basics - scalability, reliability, availability\n2. Practiced with real-world examples\n3. Joined the System Design pod for peer learning\n4. Built actual projects to apply concepts\n\nThe key was consistent practice and getting feedback from experienced engineers.",
-    timestamp: "2 days ago",
-    likes: 34,
-    comments: 12,
-    shares: 8,
-    tags: ["SystemDesign", "Learning", "Interview"],
-    isLiked: false,
-    isBookmarked: true,
-    author: {
-      id: "alex_codes",
-      name: "Alex Johnson",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-  },
-  {
-    id: "2",
-    content:
-      "Quick tip for anyone learning React: Use the React Developer Tools browser extension. It's a game-changer for debugging component state and props. You can inspect the component tree, see state changes in real-time, and even time-travel debug! 🚀",
-    timestamp: "5 days ago",
-    likes: 28,
-    comments: 7,
-    shares: 15,
-    tags: ["React", "Tips", "Development"],
-    isLiked: true,
-    isBookmarked: false,
-    author: {
-      id: "alex_codes",
-      name: "Alex Johnson",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-  },
-]
-
-const USER_ACTIVITY = [
-  {
-    id: "1",
-    type: "achievement",
-    message: "Earned the 'Study Streak Master' achievement",
-    timestamp: "2 hours ago",
-    icon: "🏆",
-  },
-  {
-    id: "2",
-    type: "post",
-    message: "Created a new post about system design learning",
-    timestamp: "2 days ago",
-    icon: "📝",
-  },
-  {
-    id: "3",
-    type: "pod",
-    message: "Joined the 'Advanced React Patterns' pod",
-    timestamp: "3 days ago",
-    icon: "👥",
-  },
-]
+const USER_ACTIVITY: any[] = []
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("posts")
-  const [isFollowing, setIsFollowing] = useState(USER_PROFILE.isFollowing)
+  const [posts, setPosts] = useState<Post[]>([])
+  const [stats, setStats] = useState({
+    pods: 0,
+    resources: 0,
+    quests: 0,
+  })
+  const [isFollowing, setIsFollowing] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
-  const [isOwnProfile] = useState(true)
+  const { user, profile, loading, updateProfile } = useAuth()
+  const [isOwnProfile, setIsOwnProfile] = useState(true)
+  const [questProgress, setQuestProgress] = useState<QuestProgress[]>([])
+  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([])
+  const [allAchievements, setAllAchievements] = useState<Achievement[]>([])
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
+
 
   // Profile edit state
   const [profileData, setProfileData] = useState({
-    name: USER_PROFILE.name,
-    bio: USER_PROFILE.bio,
-    location: USER_PROFILE.location,
-    website: USER_PROFILE.website,
+    displayName: "",
+    bio: "",
+    location: "",
+    website: "",
   })
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login")
+    }
+    if (profile) {
+      setProfileData({
+        displayName: profile.displayName || "",
+        bio: profile.bio || "",
+        location: profile.location || "",
+        website: profile.website || "",
+      })
+    }
+    if (user) {
+        const fetchQuestProgress = async () => {
+            const [progress, allQuests] = await Promise.all([
+                questsService.getAllQuestProgressForUser(user.$id),
+                questsService.getAllQuests()
+            ]);
+
+            setQuestProgress(progress);
+
+            const questsMap = new Map(allQuests.map(q => [q.$id, q]));
+            const recent = progress
+                .filter(p => p.status === 'completed' && p.completedAt)
+                .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())
+                .slice(0, 5)
+                .map(p => {
+                    const quest = questsMap.get(p.questId);
+                    return {
+                        id: p.$id,
+                        status: p.status,
+                        title: quest?.title || 'Unknown Quest',
+                        difficulty: quest?.difficulty || 'easy',
+                        points: quest?.points || 0,
+                        timestamp: new Date(p.completedAt!).toLocaleDateString(),
+                    }
+                });
+            setRecentActivity(recent);
+        }
+        const fetchAchievements = async () => {
+            const [userAch, allAch] = await Promise.all([
+                achievementsService.getUserAchievements(user.$id),
+                achievementsService.getAchievements()
+            ]);
+            setUserAchievements(userAch);
+            setAllAchievements(allAch);
+        }
+        const fetchPosts = async () => {
+            const userPosts = await postsService.getUserPosts(user.$id);
+            setPosts(userPosts);
+        }
+        const fetchStats = async () => {
+            const [pods, resources, quests] = await Promise.all([
+                podsService.getUserPods(user.$id),
+                resourcesService.getUserResources(user.$id),
+                questsService.getAllQuestProgressForUser(user.$id)
+            ]);
+            setStats({
+                pods: pods.length,
+                resources: resources.length,
+                quests: quests.filter(q => q.status === 'completed').length
+            });
+        }
+        fetchQuestProgress();
+        fetchAchievements();
+        fetchPosts();
+        fetchStats();
+    }
+  }, [user, profile, loading, router])
 
   // Settings state
   const [privacySettings, setPrivacySettings] = useState({
@@ -326,7 +182,7 @@ export default function ProfilePage() {
     setIsFollowing(!isFollowing)
     toast({
       title: isFollowing ? "Unfollowed" : "Following",
-      description: isFollowing ? `You unfollowed ${USER_PROFILE.name}` : `You are now following ${USER_PROFILE.name}`,
+      description: isFollowing ? `You unfollowed ${profile?.displayName}` : `You are now following ${profile?.displayName}`,
     })
   }
 
@@ -334,7 +190,7 @@ export default function ProfilePage() {
     router.push("/app/chat")
     toast({
       title: "Message",
-      description: "Opening chat with " + USER_PROFILE.name,
+      description: "Opening chat with " + profile?.displayName,
     })
   }
 
@@ -342,12 +198,22 @@ export default function ProfilePage() {
     setIsEditDialogOpen(true)
   }
 
-  const handleSaveProfile = () => {
-    setIsEditDialogOpen(false)
-    toast({
-      title: "Profile Updated",
-      description: "Your profile information has been saved successfully.",
-    })
+  const handleSaveProfile = async () => {
+    if (!profile) return
+    try {
+      await updateProfile(profileData)
+      setIsEditDialogOpen(false)
+      toast({
+        title: "Profile Updated",
+        description: "Your profile information has been saved successfully.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Could not update profile.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleSettings = () => {
@@ -440,6 +306,10 @@ export default function ProfilePage() {
     }
   }
 
+  if (loading || !profile) {
+    return <ProfileSkeleton />
+  }
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       {/* Mobile Header */}
@@ -464,44 +334,44 @@ export default function ProfilePage() {
               <div className="md:hidden space-y-4">
                 <div className="flex items-center space-x-4">
                   <Avatar className="w-20 h-20">
-                    <AvatarImage src={USER_PROFILE.avatar || "/placeholder.svg"} alt={USER_PROFILE.name} />
+                    <AvatarImage src={profile.avatar || "/placeholder.svg"} alt={profile.displayName} />
                     <AvatarFallback className="text-xl">
-                      {USER_PROFILE.name
+                      {profile.displayName
                         .split(" ")
                         .map((n) => n[0])
                         .join("")}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <h1 className="text-xl font-bold">{USER_PROFILE.name}</h1>
-                    <p className="text-muted-foreground">{USER_PROFILE.username}</p>
+                    <h1 className="text-xl font-bold">{profile.displayName}</h1>
+                    <p className="text-muted-foreground">@{profile.username}</p>
                     <div className="flex items-center space-x-4 text-sm mt-2">
                       <div>
-                        <span className="font-semibold">{USER_PROFILE.following.toLocaleString()}</span>
+                        <span className="font-semibold">{profile.followingCount.toLocaleString()}</span>
                         <span className="text-muted-foreground ml-1">Following</span>
                       </div>
                       <div>
-                        <span className="font-semibold">{USER_PROFILE.followers.toLocaleString()}</span>
+                        <span className="font-semibold">{profile.followersCount.toLocaleString()}</span>
                         <span className="text-muted-foreground ml-1">Followers</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <p className="text-muted-foreground text-sm">{USER_PROFILE.bio}</p>
+                <p className="text-muted-foreground text-sm">{profile.bio}</p>
 
                 <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                   <div className="flex items-center space-x-1">
                     <MapPin className="w-3 h-3" />
-                    <span>{USER_PROFILE.location}</span>
+                    <span>{profile.location || "Not specified"}</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <LinkIcon className="w-3 h-3" />
-                    <span className="text-primary">{USER_PROFILE.website}</span>
+                    <span className="text-primary">{profile.website || "Not specified"}</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Calendar className="w-3 h-3" />
-                    <span>Joined {USER_PROFILE.joinedDate}</span>
+                    <span>Joined {new Date(profile.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
                   </div>
                 </div>
 
@@ -540,9 +410,9 @@ export default function ProfilePage() {
               {/* Desktop Profile Layout */}
               <div className="hidden md:flex items-start space-x-6">
                 <Avatar className="w-24 h-24 lg:w-32 lg:h-32">
-                  <AvatarImage src={USER_PROFILE.avatar || "/placeholder.svg"} alt={USER_PROFILE.name} />
+                  <AvatarImage src={profile.avatar || "/placeholder.svg"} alt={profile.displayName} />
                   <AvatarFallback className="text-2xl">
-                    {USER_PROFILE.name
+                    {profile.displayName
                       .split(" ")
                       .map((n) => n[0])
                       .join("")}
@@ -551,34 +421,34 @@ export default function ProfilePage() {
 
                 <div className="flex-1 space-y-4">
                   <div>
-                    <h1 className="text-3xl font-bold">{USER_PROFILE.name}</h1>
-                    <p className="text-muted-foreground text-lg">{USER_PROFILE.username}</p>
+                    <h1 className="text-3xl font-bold">{profile.displayName}</h1>
+                    <p className="text-muted-foreground text-lg">@{profile.username}</p>
                   </div>
 
-                  <p className="text-muted-foreground max-w-2xl">{USER_PROFILE.bio}</p>
+                  <p className="text-muted-foreground max-w-2xl">{profile.bio}</p>
 
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center space-x-1">
                       <MapPin className="w-4 h-4" />
-                      <span>{USER_PROFILE.location}</span>
+                      <span>{profile.location || "Not specified"}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <LinkIcon className="w-4 h-4" />
-                      <span className="text-primary cursor-pointer hover:underline">{USER_PROFILE.website}</span>
+                      <span className="text-primary cursor-pointer hover:underline">{profile.website || "Not specified"}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <Calendar className="w-4 h-4" />
-                      <span>Joined {USER_PROFILE.joinedDate}</span>
+                      <span>Joined {new Date(profile.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
                     </div>
                   </div>
 
                   <div className="flex items-center space-x-6 text-sm">
                     <div className="cursor-pointer hover:underline">
-                      <span className="font-semibold">{USER_PROFILE.following.toLocaleString()}</span>
+                      <span className="font-semibold">{profile.followingCount.toLocaleString()}</span>
                       <span className="text-muted-foreground ml-1">Following</span>
                     </div>
                     <div className="cursor-pointer hover:underline">
-                      <span className="font-semibold">{USER_PROFILE.followers.toLocaleString()}</span>
+                      <span className="font-semibold">{profile.followersCount.toLocaleString()}</span>
                       <span className="text-muted-foreground ml-1">Followers</span>
                     </div>
                   </div>
@@ -615,7 +485,7 @@ export default function ProfilePage() {
                   <Target className="w-4 h-4 md:w-6 md:h-6 text-orange-600" />
                 </div>
               </div>
-              <div className="text-lg md:text-2xl font-bold">{USER_PROFILE.stats.studyStreak}</div>
+              <div className="text-lg md:text-2xl font-bold">{profile.reputationScore}</div>
               <div className="text-xs md:text-sm text-muted-foreground">Day Streak</div>
             </CardContent>
           </Card>
@@ -627,7 +497,7 @@ export default function ProfilePage() {
                   <Clock className="w-4 h-4 md:w-6 md:h-6 text-blue-600" />
                 </div>
               </div>
-              <div className="text-lg md:text-2xl font-bold">{USER_PROFILE.stats.totalHours}</div>
+              <div className="text-lg md:text-2xl font-bold">0</div>
               <div className="text-xs md:text-sm text-muted-foreground">Study Hours</div>
             </CardContent>
           </Card>
@@ -639,7 +509,7 @@ export default function ProfilePage() {
                   <Users className="w-4 h-4 md:w-6 md:h-6 text-green-600" />
                 </div>
               </div>
-              <div className="text-lg md:text-2xl font-bold">{USER_PROFILE.stats.podsJoined}</div>
+              <div className="text-lg md:text-2xl font-bold">{stats.pods}</div>
               <div className="text-xs md:text-sm text-muted-foreground">Pods Joined</div>
             </CardContent>
           </Card>
@@ -651,7 +521,7 @@ export default function ProfilePage() {
                   <BookOpen className="w-4 h-4 md:w-6 md:h-6 text-purple-600" />
                 </div>
               </div>
-              <div className="text-lg md:text-2xl font-bold">{USER_PROFILE.stats.resourcesShared}</div>
+              <div className="text-lg md:text-2xl font-bold">{stats.resources}</div>
               <div className="text-xs md:text-sm text-muted-foreground">Resources Shared</div>
             </CardContent>
           </Card>
@@ -663,7 +533,7 @@ export default function ProfilePage() {
                   <Trophy className="w-4 h-4 md:w-6 md:h-6 text-indigo-600" />
                 </div>
               </div>
-              <div className="text-lg md:text-2xl font-bold">{USER_PROFILE.stats.questsCompleted}</div>
+              <div className="text-lg md:text-2xl font-bold">{stats.quests}</div>
               <div className="text-xs md:text-sm text-muted-foreground">Quests Done</div>
             </CardContent>
           </Card>
@@ -675,7 +545,7 @@ export default function ProfilePage() {
                   <Star className="w-4 h-4 md:w-6 md:h-6 text-pink-600" />
                 </div>
               </div>
-              <div className="text-lg md:text-2xl font-bold">{USER_PROFILE.stats.totalPoints}</div>
+              <div className="text-lg md:text-2xl font-bold">{profile.reputationScore}</div>
               <div className="text-xs md:text-sm text-muted-foreground">Total Points</div>
             </CardContent>
           </Card>
@@ -686,7 +556,7 @@ export default function ProfilePage() {
           <div className="border-b border-border">
             <div className="flex space-x-0">
               {[
-                { value: "posts", label: "Posts", icon: "📝", count: USER_POSTS.length },
+                { value: "posts", label: "Posts", icon: "📝", count: posts.length },
                 {
                   value: "achievements",
                   label: "Achievements",
@@ -723,115 +593,39 @@ export default function ProfilePage() {
 
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="posts" className="space-y-4">
-            {USER_POSTS.map((post) => (
-              <Card key={post.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4 md:p-6">
-                  <div className="flex items-start space-x-3 mb-3">
-                    <Avatar className="w-8 h-8 cursor-pointer" onClick={() => handlePostClick(post.author.id)}>
-                      <AvatarImage src={post.author.avatar || "/placeholder.svg"} />
-                      <AvatarFallback>{post.author.name.slice(0, 2)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <p
-                        className="font-medium text-sm cursor-pointer hover:underline"
-                        onClick={() => handlePostClick(post.author.id)}
-                      >
-                        {post.author.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{post.timestamp}</p>
-                    </div>
-                  </div>
-
-                  {post.title && <h3 className="font-semibold text-base md:text-lg mb-3">{post.title}</h3>}
-                  <div className="text-sm mb-4 whitespace-pre-wrap leading-relaxed">{post.content}</div>
-
-                  {post.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {post.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          #{tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <div className="flex items-center space-x-2 md:space-x-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleLike(post.id)}
-                        className={`${post.isLiked ? "text-red-500" : ""} hover:text-red-500 h-8 px-2 md:px-3`}
-                      >
-                        <Heart className={`w-4 h-4 mr-1 md:mr-2 ${post.isLiked ? "fill-current" : ""}`} />
-                        <span className="text-xs md:text-sm">{post.likes}</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="hover:text-blue-500 h-8 px-2 md:px-3"
-                        onClick={() => handleComment(post.id)}
-                      >
-                        <MessageSquare className="w-4 h-4 mr-1 md:mr-2" />
-                        <span className="text-xs md:text-sm">{post.comments}</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleShare(post.id)}
-                        className="hover:text-green-500 h-8 px-2 md:px-3"
-                      >
-                        <Share2 className="w-4 h-4 mr-1 md:mr-2" />
-                        <span className="text-xs md:text-sm">{post.shares}</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleBookmark(post.id)}
-                        className={`${post.isBookmarked ? "text-yellow-500" : ""} hover:text-yellow-500 h-8 px-2 md:px-3`}
-                      >
-                        <Bookmark className={`w-4 h-4 ${post.isBookmarked ? "fill-current" : ""}`} />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {posts.length > 0 ? (
+                posts.map((post) => <PostCard key={post.$id} post={post} />)
+            ) : (
+                <div className="text-center py-12">
+                    <p className="text-muted-foreground">No posts yet.</p>
+                </div>
+            )}
           </TabsContent>
 
           <TabsContent value="achievements" className="space-y-4">
             <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {USER_ACHIEVEMENTS.map((achievement) => (
-                <Card
-                  key={achievement.id}
-                  className={`${achievement.earned ? "border-yellow-200 bg-yellow-50/50 dark:bg-yellow-900/10" : "opacity-75"}`}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="text-2xl">{achievement.icon}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-sm">{achievement.title}</h4>
-                          <Badge
-                            variant={achievement.earned ? "default" : "secondary"}
-                            className={`text-xs ${getRarityColor(achievement.rarity)}`}
-                          >
-                            {achievement.rarity}
-                          </Badge>
+              {allAchievements.map((achievement) => {
+                const userAchievement = userAchievements.find(ua => ua.achievementId === achievement.$id);
+                const earned = !!userAchievement;
+                return (
+                    <Card
+                        key={achievement.$id}
+                        className={`${earned ? "border-yellow-200 bg-yellow-50/50 dark:bg-yellow-900/10" : "opacity-75"}`}
+                    >
+                        <CardContent className="p-4">
+                        <div className="flex items-start space-x-3">
+                            <div className="text-2xl">{achievement.icon}</div>
+                            <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-semibold text-sm">{achievement.name}</h4>
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-3">{achievement.description}</p>
+                            </div>
                         </div>
-                        <p className="text-xs text-muted-foreground mb-3">{achievement.description}</p>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span>Progress</span>
-                            <span>{achievement.progress}%</span>
-                          </div>
-                          <Progress value={achievement.progress} className="h-2" />
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                        </CardContent>
+                    </Card>
+                )
+              })}
             </div>
           </TabsContent>
 
@@ -953,7 +747,7 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {QUEST_PROGRESS.recentActivity.map((activity) => (
+                  {recentActivity.length > 0 ? recentActivity.map((activity) => (
                     <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg border">
                       <div className="flex items-center space-x-3">
                         {getStatusIcon(activity.status)}
@@ -972,7 +766,7 @@ export default function ProfilePage() {
                         <div className="text-xs text-muted-foreground">points</div>
                       </div>
                     </div>
-                  ))}
+                  )) : <p className="text-sm text-muted-foreground text-center py-4">No recent activity.</p>}
                 </div>
               </CardContent>
             </Card>

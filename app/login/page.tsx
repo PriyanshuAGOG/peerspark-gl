@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { Eye, EyeOff, Github, Mail, Zap } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -20,27 +21,32 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const router = useRouter()
   const { toast } = useToast()
+  const { login, loginWithOAuth } = useAuth()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate login
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+      await login(email, password)
       toast({
         title: "Welcome back!",
         description: "You've been successfully logged in.",
       })
-      router.push("/app/feed")
-    }, 1000)
+      router.push("/app/dashboard")
+    } catch (error: any) {
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid email or password.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleOAuthLogin = (provider: string) => {
-    toast({
-      title: `${provider} Login`,
-      description: `Redirecting to ${provider} authentication...`,
-    })
+  const handleOAuthLogin = (provider: 'google' | 'github' | 'discord') => {
+    loginWithOAuth(provider)
   }
 
   return (

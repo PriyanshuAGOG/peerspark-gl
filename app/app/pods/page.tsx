@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -31,158 +31,17 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
+import { podsService, Pod } from "@/lib/services/pods"
+import { aiService } from "@/lib/services/ai"
 
-const MY_PODS = [
-  {
-    id: "dsa-masters",
-    name: "DSA Masters",
-    description: "Daily coding practice and algorithm discussions with industry experts",
-    category: "Programming",
-    members: 1247,
-    rating: 4.9,
-    difficulty: "Advanced",
-    tags: ["DSA", "Algorithms", "Interview Prep"],
-    mentor: "Rahul Sharma",
-    nextSession: "Today 8:00 PM",
-    progress: 75,
-    streak: 15,
-    role: "Member",
-    cover: "/placeholder.svg?height=120&width=200&text=DSA+Masters",
-    isActive: true,
-  },
-  {
-    id: "neet-biology",
-    name: "NEET Biology Squad",
-    description: "Comprehensive biology preparation for NEET with expert guidance",
-    category: "Medical",
-    members: 892,
-    rating: 4.8,
-    difficulty: "Intermediate",
-    tags: ["Biology", "NEET", "Medical Entrance"],
-    mentor: "Dr. Priya Singh",
-    nextSession: "Tomorrow 6:00 PM",
-    progress: 60,
-    streak: 8,
-    role: "Member",
-    cover: "/placeholder.svg?height=120&width=200&text=Biology+Squad",
-    isActive: true,
-  },
-  {
-    id: "design-thinking",
-    name: "Design Thinking Hub",
-    description: "Learn UI/UX design principles and create amazing user experiences",
-    category: "Design",
-    members: 634,
-    rating: 4.7,
-    difficulty: "Beginner",
-    tags: ["UI/UX", "Design", "Figma"],
-    mentor: "Sarah Johnson",
-    nextSession: "Friday 7:00 PM",
-    progress: 40,
-    streak: 5,
-    role: "Leader",
-    cover: "/placeholder.svg?height=120&width=200&text=Design+Hub",
-    isActive: false,
-  },
-]
-
-const EXPLORE_PODS = [
-  {
-    id: "react-mastery",
-    name: "React Mastery",
-    description: "Master React.js with hands-on projects and real-world applications",
-    category: "Programming",
-    members: 2156,
-    rating: 4.9,
-    difficulty: "Intermediate",
-    tags: ["React", "JavaScript", "Frontend"],
-    mentor: "Alex Chen",
-    price: "Free",
-    cover: "/placeholder.svg?height=120&width=200&text=React+Mastery",
-    isPremium: false,
-  },
-  {
-    id: "machine-learning",
-    name: "ML Fundamentals",
-    description: "Introduction to machine learning concepts and practical implementations",
-    category: "AI/ML",
-    members: 1834,
-    rating: 4.8,
-    difficulty: "Advanced",
-    tags: ["Machine Learning", "Python", "AI"],
-    mentor: "Dr. Raj Patel",
-    price: "₹299/month",
-    cover: "/placeholder.svg?height=120&width=200&text=ML+Fundamentals",
-    isPremium: true,
-  },
-  {
-    id: "spanish-conversation",
-    name: "Spanish Conversation Circle",
-    description: "Practice Spanish conversation with native speakers and fellow learners",
-    category: "Languages",
-    members: 567,
-    rating: 4.6,
-    difficulty: "Beginner",
-    tags: ["Spanish", "Conversation", "Language"],
-    mentor: "Maria Rodriguez",
-    price: "Free",
-    cover: "/placeholder.svg?height=120&width=200&text=Spanish+Circle",
-    isPremium: false,
-  },
-  {
-    id: "data-science",
-    name: "Data Science Bootcamp",
-    description: "Complete data science curriculum with real industry projects",
-    category: "Data Science",
-    members: 3421,
-    rating: 4.9,
-    difficulty: "Advanced",
-    tags: ["Data Science", "Python", "Analytics"],
-    mentor: "Dr. Lisa Wang",
-    price: "₹499/month",
-    cover: "/placeholder.svg?height=120&width=200&text=Data+Science",
-    isPremium: true,
-  },
-  {
-    id: "creative-writing",
-    name: "Creative Writing Workshop",
-    description: "Develop your writing skills with guided exercises and peer feedback",
-    category: "Writing",
-    members: 423,
-    rating: 4.5,
-    difficulty: "Beginner",
-    tags: ["Writing", "Creative", "Literature"],
-    mentor: "Emma Thompson",
-    price: "Free",
-    cover: "/placeholder.svg?height=120&width=200&text=Creative+Writing",
-    isPremium: false,
-  },
-  {
-    id: "blockchain-dev",
-    name: "Blockchain Development",
-    description: "Learn blockchain technology and smart contract development",
-    category: "Programming",
-    members: 1245,
-    rating: 4.7,
-    difficulty: "Advanced",
-    tags: ["Blockchain", "Solidity", "Web3"],
-    mentor: "John Crypto",
-    price: "₹399/month",
-    cover: "/placeholder.svg?height=120&width=200&text=Blockchain+Dev",
-    isPremium: true,
-  },
-]
-
-const CATEGORIES = [
-  { name: "All", count: 150, icon: Globe },
-  { name: "Programming", count: 45, icon: BookOpen },
-  { name: "Design", count: 23, icon: Target },
-  { name: "Medical", count: 18, icon: Award },
-  { name: "Languages", count: 12, icon: MessageSquare },
-  { name: "Business", count: 15, icon: TrendingUp },
-]
+// TODO: Fetch categories from backend
+const CATEGORIES: any[] = []
 
 export default function PodsPage() {
+  const [myPods, setMyPods] = useState<Pod[]>([])
+  const [explorePods, setExplorePods] = useState<Pod[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [activeTab, setActiveTab] = useState("my-pods")
@@ -205,6 +64,32 @@ export default function PodsPage() {
   })
   const router = useRouter()
   const { toast } = useToast()
+  const { user } = useAuth()
+
+  useEffect(() => {
+    const fetchPods = async () => {
+      if (!user) return
+      setIsLoading(true)
+      try {
+        const [userPods, publicPods] = await Promise.all([
+          podsService.getUserPods(user.$id),
+          podsService.getPublicPods(),
+        ])
+        setMyPods(userPods)
+        setExplorePods(publicPods)
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch pods.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchPods()
+  }, [user, toast])
+
 
   const handleJoinPod = (podId: string) => {
     router.push(`/app/pods/${podId}`)
@@ -214,8 +99,8 @@ export default function PodsPage() {
     setIsCreateDialogOpen(true)
   }
 
-  const handleCreatePodSubmit = () => {
-    if (!newPod.name || !newPod.description || !newPod.category) {
+  const handleCreatePodSubmit = async () => {
+    if (!newPod.name || !newPod.description || !newPod.category || !user) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields",
@@ -224,37 +109,54 @@ export default function PodsPage() {
       return
     }
 
-    toast({
-      title: "Pod Created!",
-      description: `${newPod.name} has been created successfully`,
-    })
+    try {
+      const created = await podsService.createPod(newPod.name, newPod.description, user.$id, {
+        subject: newPod.category,
+        difficulty: newPod.difficulty,
+        tags: newPod.tags.split(',').map(t => t.trim()),
+        isPublic: newPod.isPublic,
+      })
 
-    // Reset form and close dialog
-    setNewPod({
-      name: "",
-      description: "",
-      category: "",
-      difficulty: "",
-      tags: "",
-      isPublic: true,
-    })
-    setIsCreateDialogOpen(false)
+      toast({
+        title: "Pod Created!",
+        description: `${newPod.name} has been created successfully`,
+      })
 
-    // Simulate navigation to new pod
-    setTimeout(() => {
-      router.push(`/app/pods/new-pod-${Date.now()}`)
-    }, 1000)
+      setNewPod({
+        name: "",
+        description: "",
+        category: "",
+        difficulty: "",
+        tags: "",
+        isPublic: true,
+      })
+      setIsCreateDialogOpen(false)
+      router.push(`/app/pods/${created.pod.$id}`)
+    } catch (error) {
+      toast({
+        title: "Failed to create pod",
+        description: "An error occurred while creating the pod.",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleJoinExplorePod = (podId: string, podName: string) => {
-    toast({
-      title: "Joining Pod",
-      description: `Welcome to ${podName}! You can now access all pod resources.`,
-    })
-    // Add pod to user's pods and redirect
-    setTimeout(() => {
+  const handleJoinExplorePod = async (podId: string, podName: string) => {
+    if(!user) return;
+    try {
+      await podsService.joinPod(podId, user.$id)
+      toast({
+        title: "Joining Pod",
+        description: `Welcome to ${podName}! You can now access all pod resources.`,
+      })
       router.push(`/app/pods/${podId}`)
-    }, 1000)
+    } catch (error) {
+      toast({
+        title: "Failed to join pod",
+        description: "An error occurred while trying to join the pod.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handlePodChat = (podId: string) => {
@@ -294,31 +196,18 @@ export default function PodsPage() {
     }
 
     try {
-      // Call the backend API
-      const response = await fetch("/api/pods/schedule/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          podId: schedulerForm.podId,
-          subject: schedulerForm.subject,
-          duration: Number.parseInt(schedulerForm.duration),
-          dailyStudyTime: Number.parseInt(schedulerForm.dailyStudyTime),
-          reminderTime: schedulerForm.reminderTime,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to generate schedule")
-      }
-
-      const data = await response.json()
+        const roadmap = await aiService.generateStudyPlan({
+            subject: schedulerForm.subject,
+            duration: Number.parseInt(schedulerForm.duration),
+            dailyStudyTime: Number.parseInt(schedulerForm.dailyStudyTime),
+            difficulty: 'intermediate' // This should be dynamic
+        });
 
       toast({
         title: "Schedule Generated!",
-        description: `AI-powered roadmap created for ${schedulerForm.subject}. Check your calendar for daily tasks.`,
+        description: `AI-powered roadmap created for ${schedulerForm.subject}.`,
       })
+      console.log(roadmap); // For now, just log the roadmap
 
       // Reset form and close dialog
       setSchedulerForm({
@@ -330,8 +219,6 @@ export default function PodsPage() {
       })
       setIsSchedulerDialogOpen(false)
 
-      // Navigate to calendar view
-      router.push(`/app/calendar?pod=${schedulerForm.podId}`)
     } catch (error) {
       toast({
         title: "Error",
@@ -341,13 +228,13 @@ export default function PodsPage() {
     }
   }
 
-  const filteredExplorePods = EXPLORE_PODS.filter((pod) => {
+  const filteredExplorePods = explorePods.filter((pod) => {
     const matchesSearch =
       pod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       pod.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       pod.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
 
-    const matchesCategory = selectedCategory === "All" || pod.category === selectedCategory
+    const matchesCategory = selectedCategory === "All" || pod.subject === selectedCategory
 
     return matchesSearch && matchesCategory
   })
@@ -430,105 +317,110 @@ export default function PodsPage() {
         {/* My Pods Tab */}
         {activeTab === "my-pods" && (
           <div className="space-y-6">
-            {/* My Pods Grid */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {MY_PODS.map((pod) => (
-                <Card key={pod.id} className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
-                  <div className="relative">
-                    <img
-                      src={pod.cover || "/placeholder.svg"}
-                      alt={pod.name}
-                      className="w-full h-32 object-cover rounded-t-lg"
-                    />
-                    <div className="absolute top-3 left-3">
-                      <Badge className={getDifficultyColor(pod.difficulty)}>{pod.difficulty}</Badge>
-                    </div>
-                    <div className="absolute top-3 right-3">
-                      {pod.role === "Leader" && (
-                        <Badge className="bg-yellow-500 text-white">
-                          <Crown className="w-3 h-3 mr-1" />
-                          Leader
-                        </Badge>
-                      )}
-                      {pod.isActive && <div className="w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>}
-                    </div>
-                  </div>
-
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">{pod.name}</h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2">{pod.description}</p>
+            {isLoading ? (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-96 w-full" />)}
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {myPods.map((pod) => (
+                  <Card key={pod.$id} className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
+                    <div className="relative">
+                      <img
+                        src={pod.avatar || "/placeholder.svg"}
+                        alt={pod.name}
+                        className="w-full h-32 object-cover rounded-t-lg"
+                      />
+                      <div className="absolute top-3 left-3">
+                        <Badge className={getDifficultyColor(pod.difficulty)}>{pod.difficulty}</Badge>
                       </div>
-
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-4">
-                          <span className="flex items-center text-muted-foreground">
-                            <Users className="w-4 h-4 mr-1" />
-                            {pod.members.toLocaleString()}
-                          </span>
-                          <span className="flex items-center text-muted-foreground">
-                            <Star className="w-4 h-4 mr-1 text-yellow-500" />
-                            {pod.rating}
-                          </span>
-                        </div>
-                        <Badge variant="outline">{pod.category}</Badge>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium">Progress</span>
-                          <span className="text-muted-foreground">{pod.progress}%</span>
-                        </div>
-                        <Progress value={pod.progress} className="h-2" />
-                      </div>
-
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <span className="flex items-center">
-                          <Clock className="w-4 h-4 mr-1" />
-                          {pod.nextSession}
-                        </span>
-                        <span className="flex items-center">
-                          <Zap className="w-4 h-4 mr-1 text-orange-500" />
-                          {pod.streak} day streak
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1">
-                        {pod.tags.slice(0, 3).map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
+                      <div className="absolute top-3 right-3">
+                        {pod.creatorId === user?.$id && (
+                          <Badge className="bg-yellow-500 text-white">
+                            <Crown className="w-3 h-3 mr-1" />
+                            Leader
                           </Badge>
-                        ))}
-                      </div>
-
-                      <div className="flex space-x-2 pt-2">
-                        <Button onClick={() => handleJoinPod(pod.id)} className="flex-1 bg-primary hover:bg-primary/90">
-                          <Video className="w-4 h-4 mr-2" />
-                          Enter Pod
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="bg-transparent"
-                          onClick={() => handlePodChat(pod.id)}
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="bg-transparent"
-                          onClick={() => handleOpenScheduler(pod.id, pod.name)}
-                        >
-                          <Calendar className="w-4 h-4" />
-                        </Button>
+                        )}
+                        {pod.isActive && <div className="w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div>
+                          <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">{pod.name}</h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{pod.description}</p>
+                        </div>
+
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-4">
+                            <span className="flex items-center text-muted-foreground">
+                              <Users className="w-4 h-4 mr-1" />
+                              {pod.memberCount.toLocaleString()}
+                            </span>
+                            <span className="flex items-center text-muted-foreground">
+                              <Star className="w-4 h-4 mr-1 text-yellow-500" />
+                              {/* TODO: Add rating */}
+                              4.8
+                            </span>
+                          </div>
+                          <Badge variant="outline">{pod.subject}</Badge>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium">Progress</span>
+                            <span className="text-muted-foreground">0%</span>
+                          </div>
+                          <Progress value={0} className="h-2" />
+                        </div>
+
+                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                          <span className="flex items-center">
+                            <Clock className="w-4 h-4 mr-1" />
+                            No sessions
+                          </span>
+                          <span className="flex items-center">
+                            <Zap className="w-4 h-4 mr-1 text-orange-500" />0 day streak
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1">
+                          {pod.tags.slice(0, 3).map((tag) => (
+                            <Badge key={tag} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+
+                        <div className="flex space-x-2 pt-2">
+                          <Button onClick={() => handleJoinPod(pod.$id)} className="flex-1 bg-primary hover:bg-primary/90">
+                            <Video className="w-4 h-4 mr-2" />
+                            Enter Pod
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="bg-transparent"
+                            onClick={() => handlePodChat(pod.$id)}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="bg-transparent"
+                            onClick={() => handleOpenScheduler(pod.$id, pod.name)}
+                          >
+                            <Calendar className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -573,83 +465,81 @@ export default function PodsPage() {
             </div>
 
             {/* Explore Pods Grid */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredExplorePods.map((pod) => (
-                <Card key={pod.id} className="hover:shadow-lg transition-all duration-200 group">
-                  <div className="relative">
-                    <img
-                      src={pod.cover || "/placeholder.svg"}
-                      alt={pod.name}
-                      className="w-full h-32 object-cover rounded-t-lg"
-                    />
-                    <div className="absolute top-3 left-3">
-                      <Badge className={getDifficultyColor(pod.difficulty)}>{pod.difficulty}</Badge>
-                    </div>
-                    <div className="absolute top-3 right-3">
-                      {pod.isPremium && (
-                        <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
-                          <Crown className="w-3 h-3 mr-1" />
-                          Premium
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">{pod.name}</h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2">{pod.description}</p>
+            {isLoading ? (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-80 w-full" />)}
+                </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredExplorePods.map((pod) => (
+                  <Card key={pod.$id} className="hover:shadow-lg transition-all duration-200 group">
+                    <div className="relative">
+                      <img
+                        src={pod.avatar || "/placeholder.svg"}
+                        alt={pod.name}
+                        className="w-full h-32 object-cover rounded-t-lg"
+                      />
+                      <div className="absolute top-3 left-3">
+                        <Badge className={getDifficultyColor(pod.difficulty)}>{pod.difficulty}</Badge>
                       </div>
+                    </div>
 
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-4">
-                          <span className="flex items-center text-muted-foreground">
-                            <Users className="w-4 h-4 mr-1" />
-                            {pod.members.toLocaleString()}
-                          </span>
-                          <span className="flex items-center text-muted-foreground">
-                            <Star className="w-4 h-4 mr-1 text-yellow-500" />
-                            {pod.rating}
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div>
+                          <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">{pod.name}</h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{pod.description}</p>
+                        </div>
+
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-4">
+                            <span className="flex items-center text-muted-foreground">
+                              <Users className="w-4 h-4 mr-1" />
+                              {pod.memberCount.toLocaleString()}
+                            </span>
+                            <span className="flex items-center text-muted-foreground">
+                              <Star className="w-4 h-4 mr-1 text-yellow-500" />
+                              4.8
+                            </span>
+                          </div>
+                          <Badge variant="outline">{pod.subject}</Badge>
+                        </div>
+
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">By: {pod.creatorId}</span>
+                          <span className={`font-semibold text-green-600`}>
+                            Free
                           </span>
                         </div>
-                        <Badge variant="outline">{pod.category}</Badge>
-                      </div>
 
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Mentor: {pod.mentor}</span>
-                        <span className={`font-semibold ${pod.price === "Free" ? "text-green-600" : "text-primary"}`}>
-                          {pod.price}
-                        </span>
-                      </div>
+                        <div className="flex flex-wrap gap-1">
+                          {pod.tags.slice(0, 3).map((tag) => (
+                            <Badge key={tag} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
 
-                      <div className="flex flex-wrap gap-1">
-                        {pod.tags.slice(0, 3).map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
+                        <div className="flex space-x-2 pt-2">
+                          <Button
+                            onClick={() => handleJoinExplorePod(pod.$id, pod.name)}
+                            className="flex-1 bg-primary hover:bg-primary/90"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Join Pod
+                          </Button>
+                          <Button variant="outline" size="icon" className="bg-transparent" onClick={() => router.push(`/app/pods/${pod.$id}`)}>
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
-                      <div className="flex space-x-2 pt-2">
-                        <Button
-                          onClick={() => handleJoinExplorePod(pod.id, pod.name)}
-                          className="flex-1 bg-primary hover:bg-primary/90"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Join Pod
-                        </Button>
-                        <Button variant="outline" size="icon" className="bg-transparent">
-                          <ChevronRight className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {filteredExplorePods.length === 0 && (
+            {filteredExplorePods.length === 0 && !isLoading && (
               <div className="text-center py-12">
                 <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="text-lg font-semibold mb-2">No pods found</h3>

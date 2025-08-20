@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Bell, Settings, X, Clock, Trophy, BookOpen, Users, Calendar } from "lucide-react"
+import { Bell, Settings, X, Clock, Trophy, BookOpen, Users, Calendar, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -10,16 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-
-interface Notification {
-  id: string
-  type: "reminder" | "achievement" | "pod_update" | "quest_available" | "streak_warning"
-  title: string
-  message: string
-  timestamp: Date
-  read: boolean
-  actionUrl?: string
-}
+import { useAuth } from "@/contexts/auth-context"
+import { notificationService, Notification } from "@/lib/services/notifications"
 
 interface NotificationSettings {
   dailyReminders: boolean
@@ -38,42 +30,9 @@ interface NotificationSettings {
 export function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("notifications")
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: "1",
-      type: "reminder",
-      title: "Daily Quest Available",
-      message: "Complete your JavaScript fundamentals quiz to maintain your streak!",
-      timestamp: new Date(Date.now() - 5 * 60 * 1000),
-      read: false,
-      actionUrl: "/app/pods/javascript-basics",
-    },
-    {
-      id: "2",
-      type: "achievement",
-      title: "Achievement Unlocked!",
-      message: "You've completed 7 days in a row! Keep up the great work.",
-      timestamp: new Date(Date.now() - 30 * 60 * 1000),
-      read: false,
-    },
-    {
-      id: "3",
-      type: "pod_update",
-      title: "Pod Activity",
-      message: "Sarah completed the React Hooks challenge in your pod.",
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      read: true,
-    },
-    {
-      id: "4",
-      type: "streak_warning",
-      title: "Streak at Risk",
-      message: "You haven't completed today's tasks yet. Don't break your 12-day streak!",
-      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-      read: false,
-      actionUrl: "/app/calendar",
-    },
-  ])
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const { user } = useAuth()
 
   const [settings, setSettings] = useState<NotificationSettings>({
     dailyReminders: true,
@@ -89,40 +48,53 @@ export function NotificationCenter() {
     },
   })
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  useEffect(() => {
+    if (!user) return
+    const fetchNotifications = async () => {
+        setIsLoading(true)
+        const userNotifications = await notificationService.getUserNotifications(user.$id)
+        setNotifications(userNotifications)
+        setIsLoading(false)
+    }
+    if (isOpen) {
+        fetchNotifications()
+    }
+  }, [isOpen, user])
+
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length
 
   const getNotificationIcon = (type: Notification["type"]) => {
     switch (type) {
-      case "reminder":
+      case "event":
         return <Clock className="h-4 w-4 text-blue-500" />
-      case "achievement":
-        return <Trophy className="h-4 w-4 text-yellow-500" />
-      case "pod_update":
+      case "pod_join":
         return <Users className="h-4 w-4 text-green-500" />
-      case "quest_available":
-        return <BookOpen className="h-4 w-4 text-purple-500" />
-      case "streak_warning":
-        return <Calendar className="h-4 w-4 text-red-500" />
       default:
         return <Bell className="h-4 w-4" />
     }
   }
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
+  const markAsRead = async (id: string) => {
+    await notificationService.markAsRead(id)
+    setNotifications((prev) => prev.map((n) => (n.$id === id ? { ...n, isRead: true } : n)))
   }
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+  const markAllAsRead = async () => {
+    if (!user) return
+    await notificationService.markAllAsRead(user.$id)
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
   }
 
   const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
+    // TODO: Implement delete notification
+    console.log("Deleting notification", id)
   }
 
-  const formatTimestamp = (timestamp: Date) => {
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp)
     const now = new Date()
-    const diff = now.getTime() - timestamp.getTime()
+    const diff = now.getTime() - date.getTime()
     const minutes = Math.floor(diff / (1000 * 60))
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
@@ -191,7 +163,11 @@ export function NotificationCenter() {
 
               <ScrollArea className="h-96">
                 <div className="p-2">
-                  {notifications.length === 0 ? (
+                  {isLoading ? (
+                    <div className="flex justify-center items-center h-full">
+                      <Loader2 className="h-8 w-8 animate-spin" />
+                    </div>
+                  ) : notifications.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p>No notifications yet</p>
@@ -199,11 +175,11 @@ export function NotificationCenter() {
                   ) : (
                     notifications.map((notification) => (
                       <Card
-                        key={notification.id}
+                        key={notification.$id}
                         className={`mb-2 cursor-pointer transition-colors ${
-                          !notification.read ? "bg-blue-50 border-blue-200" : ""
+                          !notification.isRead ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800" : ""
                         }`}
-                        onClick={() => markAsRead(notification.id)}
+                        onClick={() => markAsRead(notification.$id)}
                       >
                         <CardContent className="p-3">
                           <div className="flex items-start gap-3">
@@ -220,7 +196,7 @@ export function NotificationCenter() {
                                     size="sm"
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      deleteNotification(notification.id)
+                                      deleteNotification(notification.$id)
                                     }}
                                     className="h-6 w-6 p-0"
                                   >
@@ -239,7 +215,7 @@ export function NotificationCenter() {
                                     window.location.href = notification.actionUrl!
                                   }}
                                 >
-                                  Take Action →
+                                  {notification.actionText || "Take Action →"}
                                 </Button>
                               )}
                             </div>
