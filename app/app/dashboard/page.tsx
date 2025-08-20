@@ -8,6 +8,10 @@ import { Progress } from "@/components/ui/progress"
 import { Calendar, Clock, Users, Trophy, TrendingUp, Plus, Play, Target, Zap, Star, ChevronRight, CalendarDays, Timer, Brain, FileText, BarChart3, Flame, Bell, Settings, MessageSquare, Video, BookOpen } from 'lucide-react'
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
+import { podsService, Pod } from "@/lib/services/pods"
+import { calendarService, CalendarEvent } from "@/lib/services/calendar"
+import { questsService, Quest, QuestProgress } from "@/lib/services/quests"
 import {
   AreaChart,
   Area,
@@ -107,81 +111,54 @@ const PERFORMANCE_METRICS = [
 export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { user } = useAuth()
   const [currentTime, setCurrentTime] = useState(new Date())
   const [activeTab, setActiveTab] = useState("overview")
 
-  // Sample data
-  const [myPods] = useState<Pod[]>([
-    {
-      id: "1",
-      name: "Advanced Mathematics",
-      members: 12,
-      subject: "Mathematics",
-      nextSession: "Today, 3:00 PM",
-      progress: 75,
-      color: "bg-blue-500",
-    },
-    {
-      id: "2",
-      name: "Physics Study Group",
-      members: 8,
-      subject: "Physics",
-      nextSession: "Tomorrow, 10:00 AM",
-      progress: 60,
-      color: "bg-green-500",
-    },
-    {
-      id: "3",
-      name: "Computer Science Hub",
-      members: 15,
-      subject: "Computer Science",
-      nextSession: "Friday, 2:00 PM",
-      progress: 85,
-      color: "bg-purple-500",
-    },
-  ])
-
-  const [todaySessions] = useState<StudySession[]>([
-    {
-      id: "1",
-      title: "Calculus Review",
-      duration: 90,
-      completed: true,
-      podName: "Advanced Mathematics",
-      scheduledTime: "9:00 AM",
-    },
-    {
-      id: "2",
-      title: "Physics Lab Discussion",
-      duration: 60,
-      completed: false,
-      podName: "Physics Study Group",
-      scheduledTime: "3:00 PM",
-    },
-    {
-      id: "3",
-      title: "Algorithm Practice",
-      duration: 120,
-      completed: false,
-      podName: "Computer Science Hub",
-      scheduledTime: "7:00 PM",
-    },
-  ])
-
-  const [activeChallenge] = useState<Challenge>({
-    id: "1",
-    title: "Weekly Math Challenge",
-    description: "Solve 50 calculus problems",
-    difficulty: "Medium",
-    points: 250,
-    timeLeft: "2 days",
-    participants: 156,
-  })
+  const [myPods, setMyPods] = useState<Pod[]>([])
+  const [isLoadingPods, setIsLoadingPods] = useState(true)
+  const [todaySessions, setTodaySessions] = useState<CalendarEvent[]>([])
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true)
+  const [activeChallenge, setActiveChallenge] = useState<Quest | null>(null)
+  const [isLoadingChallenge, setIsLoadingChallenge] = useState(true)
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+
+    const fetchData = async () => {
+        if (user) {
+            setIsLoadingPods(true)
+            setIsLoadingSessions(true)
+            setIsLoadingChallenge(true)
+
+            // Fetch Pods
+            const pods = await podsService.getUserPods(user.$id)
+            setMyPods(pods)
+            setIsLoadingPods(false)
+
+            // Fetch Today's Sessions
+            const todayStart = new Date()
+            todayStart.setHours(0, 0, 0, 0)
+            const todayEnd = new Date()
+            todayEnd.setHours(23, 59, 59, 999)
+            const events = await calendarService.getUserEvents(user.$id, todayStart.toISOString(), todayEnd.toISOString())
+            setTodaySessions(events)
+            setIsLoadingSessions(false)
+
+            // Fetch Active Challenge
+            const progress = await questsService.getAllQuestProgressForUser(user.$id)
+            const inProgressQuest = progress.find(p => p.status === 'in-progress')
+            if (inProgressQuest) {
+                const questDetails = await questsService.getQuest(inProgressQuest.questId)
+                setActiveChallenge(questDetails)
+            }
+            setIsLoadingChallenge(false)
+        }
+    }
+
+    fetchData()
     return () => clearInterval(timer)
-  }, [])
+  }, [user])
 
   const handleScheduleSession = () => {
     router.push("/app/calendar?mode=schedule")
@@ -216,13 +193,13 @@ export default function DashboardPage() {
   }
 
   const handleJoinSession = (sessionId: string) => {
-    const session = todaySessions.find(s => s.id === sessionId)
-    if (session) {
-      router.push(`/app/pods/${session.podName.toLowerCase().replace(/\s+/g, '-')}`)
-      toast({
-        title: "Joining Session",
-        description: `Joining ${session.title}`,
-      })
+    // This logic might need adjustment depending on how sessions are joined.
+    // For now, we assume joining a session takes you to the pod page.
+    const session = todaySessions.find(s => s.$id === sessionId)
+    if (session?.podId) {
+      router.push(`/app/pods/${session.podId}`)
+    } else {
+        toast({ title: "No linked pod for this session."})
     }
   }
 
@@ -248,9 +225,13 @@ export default function DashboardPage() {
     }
   }
 
-  const completedSessions = todaySessions.filter((s) => s.completed).length
-  const totalStudyTime = todaySessions.reduce((acc, session) => acc + session.duration, 0)
-  const weeklyProgress = 68
+  // Calculated Stats
+  const completedSessionsToday = todaySessions.filter((s) => s.isCompleted).length
+  const totalStudyTimeToday = todaySessions.reduce((acc, session) => {
+    const duration = new Date(session.endTime).getTime() - new Date(session.startTime).getTime()
+    return acc + (duration > 0 ? duration : 0)
+  }, 0)
+  const totalStudyMinutesToday = Math.floor(totalStudyTimeToday / (1000 * 60))
 
   return (
     <div className="min-h-screen bg-background">
@@ -320,9 +301,9 @@ export default function DashboardPage() {
               <CardContent className="p-3 md:p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground">Sessions</p>
+                    <p className="text-xs font-medium text-muted-foreground">Sessions Today</p>
                     <p className="text-lg md:text-xl font-bold">
-                      {completedSessions}/{todaySessions.length}
+                      {completedSessionsToday}/{todaySessions.length}
                     </p>
                   </div>
                   <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
@@ -336,9 +317,9 @@ export default function DashboardPage() {
               <CardContent className="p-3 md:p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground">Study Time</p>
+                    <p className="text-xs font-medium text-muted-foreground">Study Time Today</p>
                     <p className="text-lg md:text-xl font-bold">
-                      {Math.floor(totalStudyTime / 60)}h {totalStudyTime % 60}m
+                      {Math.floor(totalStudyMinutesToday / 60)}h {totalStudyMinutesToday % 60}m
                     </p>
                   </div>
                   <div className="w-8 h-8 md:w-10 md:h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
@@ -366,11 +347,11 @@ export default function DashboardPage() {
               <CardContent className="p-3 md:p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground">Progress</p>
-                    <p className="text-lg md:text-xl font-bold">{weeklyProgress}%</p>
+                    <p className="text-xs font-medium text-muted-foreground">Quests Active</p>
+                    <p className="text-lg md:text-xl font-bold">{activeChallenge ? '1' : '0'}</p>
                   </div>
                   <div className="w-8 h-8 md:w-10 md:h-10 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-orange-600 dark:text-orange-400" />
+                    <Target className="w-4 h-4 md:w-5 md:h-5 text-orange-600 dark:text-orange-400" />
                   </div>
                 </div>
               </CardContent>
@@ -414,32 +395,38 @@ export default function DashboardPage() {
                     </Button>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {myPods.map((pod) => (
-                      <div
-                        key={pod.id}
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
-                        onClick={() => handleJoinPod(pod.id)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-3 h-3 rounded-full ${pod.color}`} />
-                          <div>
-                            <h4 className="font-medium text-sm">{pod.name}</h4>
-                            <p className="text-xs text-muted-foreground">
-                              {pod.members} members • {pod.nextSession}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Progress value={pod.progress} className="w-12 h-1.5" />
-                            <span className="text-xs font-medium">{pod.progress}%</span>
-                          </div>
-                          <Badge variant="secondary" className="text-xs">
-                            {pod.subject}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
+                    {isLoadingPods ? (
+                        <p className="text-sm text-muted-foreground">Loading your pods...</p>
+                    ) : myPods.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">You haven't joined any pods yet.</p>
+                    ) : (
+                        myPods.map((pod, index) => {
+                            const colors = ["bg-blue-500", "bg-green-500", "bg-purple-500", "bg-orange-500"];
+                            const podColor = colors[index % colors.length];
+                            return (
+                                <div
+                                    key={pod.$id}
+                                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
+                                    onClick={() => handleJoinPod(pod.$id)}
+                                >
+                                    <div className="flex items-center gap-3">
+                                    <div className={`w-3 h-3 rounded-full ${podColor}`} />
+                                    <div>
+                                        <h4 className="font-medium text-sm">{pod.name}</h4>
+                                        <p className="text-xs text-muted-foreground">
+                                        {pod.memberCount} members
+                                        </p>
+                                    </div>
+                                    </div>
+                                    <div className="text-right">
+                                    <Badge variant="secondary" className="text-xs">
+                                        {pod.subject}
+                                    </Badge>
+                                    </div>
+                                </div>
+                            )
+                        })
+                    )}
                   </CardContent>
                 </Card>
 
@@ -452,38 +439,39 @@ export default function DashboardPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      <div>
-                        <h4 className="font-medium text-sm">{activeChallenge.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-1">{activeChallenge.description}</p>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <Badge
-                          variant={
-                            activeChallenge.difficulty === "Easy"
-                              ? "secondary"
-                              : activeChallenge.difficulty === "Medium"
-                                ? "default"
-                                : "destructive"
-                          }
-                          className="text-xs"
-                        >
-                          {activeChallenge.difficulty}
-                        </Badge>
-                        <div className="text-right">
-                          <p className="text-xs font-medium">{activeChallenge.points} points</p>
-                          <p className="text-xs text-muted-foreground">{activeChallenge.timeLeft} left</p>
+                    {isLoadingChallenge ? (
+                        <p className="text-sm text-muted-foreground">Looking for active challenges...</p>
+                    ) : activeChallenge ? (
+                        <div className="space-y-3">
+                            <div>
+                                <h4 className="font-medium text-sm">{activeChallenge.title}</h4>
+                                <p className="text-xs text-muted-foreground mt-1">{activeChallenge.description}</p>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <Badge
+                                variant={
+                                    activeChallenge.difficulty === "easy"
+                                    ? "secondary"
+                                    : activeChallenge.difficulty === "medium"
+                                        ? "default"
+                                        : "destructive"
+                                }
+                                className="text-xs capitalize"
+                                >
+                                {activeChallenge.difficulty}
+                                </Badge>
+                                <div className="text-right">
+                                <p className="text-xs font-medium">{activeChallenge.points} points</p>
+                                </div>
+                            </div>
+                            <Button onClick={handleContinueChallenge} className="w-full">
+                                <Target className="w-4 h-4 mr-2" />
+                                Continue Challenge
+                            </Button>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Users className="w-3 h-3" />
-                        {activeChallenge.participants} participants
-                      </div>
-                      <Button onClick={handleContinueChallenge} className="w-full">
-                        <Target className="w-4 h-4 mr-2" />
-                        Continue Challenge
-                      </Button>
-                    </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">No active challenges right now. Good job!</p>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -646,46 +634,52 @@ export default function DashboardPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {todaySessions.map((session) => (
-                        <div
-                          key={session.id}
-                          className={`flex items-center justify-between p-3 border rounded-lg ${
-                            session.completed
-                              ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                              : "hover:bg-accent/50 cursor-pointer"
-                          }`}
-                          onClick={() => !session.completed && handleJoinSession(session.id)}
-                        >
-                          <div className="flex items-start space-x-4">
+                    {isLoadingSessions ? (
+                        <p className="text-sm text-muted-foreground">Loading today's schedule...</p>
+                    ) : todaySessions.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">You have no sessions scheduled for today.</p>
+                    ) : (
+                        <div className="space-y-3">
+                        {todaySessions.map((session) => (
                             <div
-                              className={`w-2 h-2 rounded-full mt-2 ${session.completed ? "bg-green-500" : "bg-orange-500"}`}
-                            />
-                            <div className="flex-1">
-                              <h4 className="font-medium text-sm">{session.title}</h4>
-                              <p className="text-xs text-muted-foreground">
-                                {session.podName} • {session.duration} min • {session.scheduledTime}
-                              </p>
+                            key={session.$id}
+                            className={`flex items-center justify-between p-3 border rounded-lg ${
+                                session.isCompleted
+                                ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                                : "hover:bg-accent/50 cursor-pointer"
+                            }`}
+                            onClick={() => !session.isCompleted && handleJoinSession(session.$id)}
+                            >
+                            <div className="flex items-start space-x-4">
+                                <div
+                                className={`w-2 h-2 rounded-full mt-2 ${session.isCompleted ? "bg-green-500" : "bg-orange-500"}`}
+                                />
+                                <div className="flex-1">
+                                <h4 className="font-medium text-sm">{session.title}</h4>
+                                <p className="text-xs text-muted-foreground">
+                                    {new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                                </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {session.completed ? (
-                              <Badge
-                                variant="secondary"
-                                className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs"
-                              >
-                                ✓ Completed
-                              </Badge>
-                            ) : (
-                              <Button size="sm" variant="outline" className="text-xs bg-transparent">
-                                <Play className="w-3 h-3 mr-1" />
-                                Join
-                              </Button>
-                            )}
-                          </div>
+                            <div className="flex items-center gap-2">
+                                {session.isCompleted ? (
+                                <Badge
+                                    variant="secondary"
+                                    className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs"
+                                >
+                                    ✓ Completed
+                                </Badge>
+                                ) : (
+                                <Button size="sm" variant="outline" className="text-xs bg-transparent">
+                                    <Play className="w-3 h-3 mr-1" />
+                                    Join
+                                </Button>
+                                )}
+                            </div>
+                            </div>
+                        ))}
                         </div>
-                      ))}
-                    </div>
+                    )}
                     <Button variant="ghost" className="w-full mt-3" onClick={handleViewCalendar}>
                       <Calendar className="w-4 h-4 mr-2" />
                       View Full Calendar
