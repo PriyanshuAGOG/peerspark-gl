@@ -5,7 +5,7 @@ import { Query } from 'appwrite'
 
 // Configure web-push with fallbacks for build process
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yM9sc2XzcRb1qVZWvAIIySW5i0-p-K1T_N8IuV5-UTLSgl1R_2L3GRQs5aP8gW1v_f2aI';
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '1234567890123456789012345678901234567890';
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || 'SO2So2So2So2So2So2So2So2So2So2So2So2So2So2';
 
 webpush.setVapidDetails(
   'mailto:admin@peerspark.com',
