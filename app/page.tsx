@@ -1,229 +1,602 @@
 "use client"
 
-import React, { useState } from 'react';
-import Confetti from 'react-confetti';
-import { motion } from 'framer-motion';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { Sparkles, ArrowRight, CheckCircle, Users, BarChart3, Clock, Star, Twitter, Linkedin, Gitlab } from 'lucide-react';
-import { waitlistService } from '@/lib/services/waitlist';
+import type React from "react"
 
-// Placeholder for 3D bird component with floating animation
-const Bird3D = () => (
-  <motion.div
-    animate={{ y: [-5, 5, -5] }}
-    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-    className="w-64 h-64 lg:w-96 lg:h-96 bg-gray-200 rounded-full flex items-center justify-center"
-  >
-    <p className="text-muted-foreground">[3D Bird Logo]</p>
-  </motion.div>
-);
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { ThemeToggle } from "@/components/theme-toggle"
+import {
+  Users,
+  Brain,
+  BookOpen,
+  Trophy,
+  Zap,
+  Star,
+  ArrowRight,
+  CheckCircle,
+  Sparkles,
+  Target,
+  Clock,
+  TrendingUp,
+  Calendar,
+  BarChart3,
+  Menu,
+  X,
+} from "lucide-react"
 
-// Placeholder for UI preview component
-const UiPreview = () => (
-    <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.5 }}
-        transition={{ duration: 0.5 }}
-        className="w-full h-96 bg-gray-200 rounded-lg flex items-center justify-center shadow-lg"
-    >
-      <p className="text-muted-foreground">[Floating Device Mockup]</p>
-    </motion.div>
-  );
+export default function LandingPage() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [currentTestimonial, setCurrentTestimonial] = useState(0)
+  const [email, setEmail] = useState("")
 
-export default function WaitlistPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const { toast } = useToast();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !email) {
-      toast({ title: "Please fill in both fields.", variant: "destructive" });
-      return;
-    }
-    setIsLoading(true);
-    try {
-      await waitlistService.joinWaitlist(name, email);
-      toast({
-        title: "You're on the list! 🎉",
-        description: "We'll notify you when PeerSpark is ready.",
-      });
-      setName('');
-      setEmail('');
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 5000);
-    } catch (error: any) {
-      toast({
-        title: "An error occurred.",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const sectionVariants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5, ease: "easeOut" }
+  const testimonials = [
+    {
+      name: "Sarah Chen",
+      role: "Computer Science Student",
+      university: "Stanford University",
+      content:
+        "PeerSpark transformed my study routine. The AI tutor helped me understand complex algorithms, and study pods made learning collaborative and fun!",
+      rating: 5,
+      avatar: "/placeholder.svg?height=60&width=60&text=SC",
     },
-  };
+    {
+      name: "Marcus Johnson",
+      role: "Pre-Med Student",
+      university: "Harvard University",
+      content:
+        "The analytics feature is incredible. I can track my progress across subjects and the AI suggests optimal study schedules. My grades improved by 15%!",
+      rating: 5,
+      avatar: "/placeholder.svg?height=60&width=60&text=MJ",
+    },
+    {
+      name: "Elena Rodriguez",
+      role: "Engineering Student",
+      university: "MIT",
+      content:
+        "Finding study partners was always difficult until PeerSpark. Now I'm part of multiple pods and we tackle challenging problems together.",
+      rating: 5,
+      avatar: "/placeholder.svg?height=60&width=60&text=ER",
+    },
+  ]
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  };
+  const features = [
+    {
+      icon: Users,
+      title: "Smart Study Pods",
+      description:
+        "Join AI-matched study groups based on your subjects, learning style, and schedule. Collaborate with peers who complement your strengths.",
+      gradient: "from-blue-500 to-purple-600",
+    },
+    {
+      icon: Brain,
+      title: "AI-Powered Tutoring",
+      description:
+        "Get instant, personalized explanations for any topic. Our AI adapts to your learning pace and provides targeted practice problems.",
+      gradient: "from-purple-500 to-pink-600",
+    },
+    {
+      icon: BarChart3,
+      title: "Learning Analytics",
+      description:
+        "Track your progress with detailed insights. Identify knowledge gaps and optimize your study schedule with data-driven recommendations.",
+      gradient: "from-pink-500 to-red-600",
+    },
+    {
+      icon: Calendar,
+      title: "Smart Scheduling",
+      description:
+        "Coordinate study sessions effortlessly. AI suggests optimal meeting times and sends intelligent reminders to keep everyone on track.",
+      gradient: "from-red-500 to-orange-600",
+    },
+    {
+      icon: BookOpen,
+      title: "Resource Vault",
+      description:
+        "Access a curated library of study materials, practice tests, and peer-shared resources. Everything organized by subject and difficulty.",
+      gradient: "from-orange-500 to-yellow-600",
+    },
+    {
+      icon: Trophy,
+      title: "Achievement System",
+      description:
+        "Stay motivated with gamified learning. Earn badges, climb leaderboards, and celebrate milestones with your study community.",
+      gradient: "from-yellow-500 to-green-600",
+    },
+  ]
+
+  const stats = [
+    { number: "50K+", label: "Active Students", icon: Users },
+    { number: "95%", label: "Grade Improvement", icon: TrendingUp },
+    { number: "2M+", label: "Study Sessions", icon: Clock },
+    { number: "4.9/5", label: "User Rating", icon: Star },
+  ]
+
+  const pricingPlans = [
+    {
+      name: "Free",
+      price: "$0",
+      period: "forever",
+      description: "Perfect for getting started",
+      features: [
+        "Join up to 3 study pods",
+        "Basic AI tutoring (10 questions/day)",
+        "Simple progress tracking",
+        "Community access",
+      ],
+      popular: false,
+    },
+    {
+      name: "Pro",
+      price: "$9.99",
+      period: "month",
+      description: "For serious students",
+      features: [
+        "Unlimited study pods",
+        "Advanced AI tutoring",
+        "Detailed analytics & insights",
+        "Priority matching",
+        "Custom study schedules",
+        "Resource sharing",
+      ],
+      popular: true,
+    },
+    {
+      name: "Team",
+      price: "$19.99",
+      period: "month",
+      description: "For study groups & classes",
+      features: [
+        "Everything in Pro",
+        "Group management tools",
+        "Instructor dashboard",
+        "Advanced collaboration",
+        "Custom integrations",
+        "Priority support",
+      ],
+      popular: false,
+    },
+  ]
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [testimonials.length])
+
+  const handleNewsletterSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // Handle newsletter signup
+    // A toast message could be shown here on success
+    setEmail("")
+  }
 
   return (
-    <div className="bg-white text-[#1a1a1a] font-sans overflow-x-hidden">
-      {showConfetti && <Confetti recycle={false} numberOfPieces={200} gravity={0.1} colors={['#FF7A59', '#FFFFFF', '#F5F5F5']} />}
+    <div className="min-h-screen bg-background">
+      {/* Floating Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-gradient-to-r from-blue-400/20 to-purple-600/20 rounded-full animate-float blur-3xl" />
+        <div
+          className="absolute top-3/4 right-1/4 w-96 h-96 bg-gradient-to-r from-pink-400/20 to-red-600/20 rounded-full animate-float blur-3xl"
+          style={{ animationDelay: "2s" }}
+        />
+        <div
+          className="absolute top-1/2 left-3/4 w-80 h-80 bg-gradient-to-r from-green-400/20 to-blue-600/20 rounded-full animate-float blur-3xl"
+          style={{ animationDelay: "4s" }}
+        />
+      </div>
+
+      {/* Navigation */}
+      <nav className="relative z-50 border-b bg-background/80 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-bold text-gradient">PeerSpark</span>
+            </div>
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-8">
+              <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
+                Features
+              </Link>
+              <Link href="#testimonials" className="text-muted-foreground hover:text-foreground transition-colors">
+                Testimonials
+              </Link>
+              <Link href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+                Pricing
+              </Link>
+              <ThemeToggle />
+              <Link href="/login">
+                <Button variant="ghost">Sign In</Button>
+              </Link>
+              <Link href="/register">
+                <Button className="premium-button text-white">Get Started</Button>
+              </Link>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden flex items-center space-x-2">
+              <ThemeToggle />
+              <Button variant="ghost" size="sm" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile Navigation */}
+          {isMenuOpen && (
+            <div className="md:hidden py-4 border-t animate-fade-in">
+              <div className="flex flex-col space-y-4">
+                <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Features
+                </Link>
+                <Link href="#testimonials" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Testimonials
+                </Link>
+                <Link href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Pricing
+                </Link>
+                <div className="flex flex-col space-y-2 pt-4 border-t">
+                  <Link href="/login">
+                    <Button variant="ghost" className="w-full justify-start">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button className="premium-button text-white w-full">Get Started</Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </nav>
 
       {/* Hero Section */}
-      <section className="min-h-screen flex items-center justify-center py-20 px-4">
-        <div className="container mx-auto grid lg:grid-cols-2 gap-12 items-center">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={{
-              visible: { transition: { staggerChildren: 0.1 } }
-            }}
-            className="text-center lg:text-left"
-          >
-            <motion.h1 variants={itemVariants} className="text-5xl lg:text-7xl font-bold leading-tight mb-4">
-              Transform Learning <span className="text-[#FF7A59]">Together.</span>
-            </motion.h1>
-            <motion.p variants={itemVariants} className="text-lg text-gray-600 mb-8 max-w-lg mx-auto lg:mx-0">
-              PeerSpark is the AI-powered social learning platform that connects you with the perfect study partners and resources to help you excel.
-            </motion.p>
-            <motion.div variants={itemVariants} className="bg-[#FAFAFA] p-6 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.05)] max-w-md mx-auto lg:mx-0">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <Input type="text" placeholder="Your Name" className="bg-white" value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} />
-                <Input type="email" placeholder="Your Email" className="bg-white" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
-                <motion.div whileHover={{ y: -2, scale: 1.01 }} transition={{ type: 'spring', stiffness: 300 }}>
-                  <Button type="submit" className="w-full bg-[#FF7A59] text-white hover:bg-[#ff8b70]" disabled={isLoading}>
-                    {isLoading ? 'Joining...' : 'Join the Waitlist'}
-                    <ArrowRight className="ml-2 w-5 h-5" />
-                  </Button>
-                </motion.div>
-              </form>
-            </motion.div>
-          </motion.div>
-          <div className="flex justify-center items-center">
-            <Bird3D />
+      <section className="relative py-20 lg:py-32 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center animate-fade-in-up">
+            <Badge className="mb-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800">
+              <Sparkles className="w-3 h-3 mr-1" />
+              Now in Private Beta
+            </Badge>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-6 leading-tight">
+              Transform Your Learning with <span className="text-gradient">AI-Powered</span> Collaboration
+            </h1>
+
+            <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
+              Join thousands of students who've revolutionized their study experience. Connect with perfect study
+              partners, get instant AI tutoring, and track your progress with intelligent analytics.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+              <Link href="/register">
+                <Button size="lg" className="premium-button text-white px-8 py-4 text-lg">
+                  Start Learning Today
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
+              <Link href="/demo">
+                <Button size="lg" variant="outline" className="px-8 py-4 text-lg glass bg-transparent">
+                  Watch Demo
+                </Button>
+              </Link>
+            </div>
+
+            {/* Benefit Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              {[
+                { icon: Target, title: "95% Grade Improvement", desc: "Students see average 15% grade boost" },
+                { icon: Users, title: "Perfect Study Matches", desc: "AI finds your ideal study partners" },
+                { icon: Zap, title: "Instant AI Help", desc: "Get explanations 24/7 from our AI tutor" },
+              ].map((benefit, index) => (
+                <Card
+                  key={index}
+                  className="glass card-hover animate-scale-in"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <CardContent className="p-6 text-center">
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                      <benefit.icon className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="font-semibold mb-2">{benefit.title}</h3>
+                    <p className="text-sm text-muted-foreground">{benefit.desc}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-16 bg-muted/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {stats.map((stat, index) => (
+              <div key={index} className="text-center animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse-glow">
+                  <stat.icon className="w-8 h-8 text-white" />
+                </div>
+                <div className="text-3xl lg:text-4xl font-bold text-gradient mb-2">{stat.number}</div>
+                <div className="text-muted-foreground">{stat.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.3 }}
-        variants={sectionVariants}
-        className="py-20 bg-[#F5F5F5]"
-      >
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold mb-12">Why You'll Love PeerSpark</h2>
-          <motion.div
-            variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
-            className="grid md:grid-cols-3 gap-8"
-          >
-            {[
-              { icon: Users, title: "Collaborate", description: "Connect with peers in AI-matched study pods for any subject." },
-              { icon: Sparkles, title: "AI Tutoring", description: "Get instant, personalized help and explanations 24/7." },
-              { icon: BarChart3, title: "Analytics", description: "Track your progress and get data-driven study recommendations." }
-            ].map((feature, i) => (
-              <motion.div key={i} variants={itemVariants} whileHover={{ y: -5, borderColor: '#FF7A59' }} className="bg-white p-8 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-transparent">
-                <feature.icon className="w-10 h-10 text-[#FF7A59] mx-auto mb-4" />
-                <h3 className="text-2xl font-bold mb-2">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </motion.section>
-
-      {/* How It Works Section */}
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.5 }}
-        variants={sectionVariants}
-        className="py-20"
-      >
-          <div className="container mx-auto px-4 text-center">
-              <h2 className="text-4xl font-bold mb-12">Get Started in Seconds</h2>
-              <motion.div
-                variants={{ visible: { transition: { staggerChildren: 0.15 } } }}
-                className="grid md:grid-cols-3 gap-12"
-              >
-                  <motion.div variants={itemVariants} className="text-center">
-                      <div className="w-16 h-16 rounded-full bg-[#FF7A59] text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div>
-                      <h3 className="text-xl font-bold mb-2">Join the Waitlist</h3>
-                      <p className="text-gray-600">Sign up to get your exclusive early access invite.</p>
-                  </motion.div>
-                  <motion.div variants={itemVariants} className="text-center">
-                      <div className="w-16 h-16 rounded-full bg-[#FF7A59] text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div>
-                      <h3 className="text-xl font-bold mb-2">Get Your Invite</h3>
-                      <p className="text-gray-600">Receive your personal access code to join the beta.</p>
-                  </motion.div>
-                  <motion.div variants={itemVariants} className="text-center">
-                      <div className="w-16 h-16 rounded-full bg-[#FF7A59] text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div>
-                      <h3 className="text-xl font-bold mb-2">Start Learning</h3>
-                      <p className="text-gray-600">Enter the app and transform your study habits.</p>
-                  </motion.div>
-              </motion.div>
+      <section id="features" className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16 animate-fade-in-up">
+            <h2 className="text-3xl lg:text-5xl font-bold mb-6">
+              Everything You Need to <span className="text-gradient">Excel Academically</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Our comprehensive platform combines the power of AI with collaborative learning to create the ultimate
+              study experience.
+            </p>
           </div>
-      </motion.section>
 
-      {/* Other sections would be animated similarly */}
-      <section className="py-20"><div className="container mx-auto px-4"><UiPreview /></div></section>
-      <section className="py-20 bg-[#F5F5F5]"><div className="container mx-auto px-4"><div className="grid md:grid-cols-3 gap-8 text-center"><div><p className="text-5xl font-bold text-[#FF7A59]">95%</p><p className="text-lg text-gray-600">Grade Improvement</p></div><div><p className="text-5xl font-bold text-[#FF7A59]">10K+</p><p className="text-lg text-gray-600">Students on Waitlist</p></div><div><p className="text-5xl font-bold text-[#FF7A59]">4.9/5</p><p className="text-lg text-gray-600">Anticipated User Rating</p></div></div></div></section>
-
-      <section className="py-20">
-        <div className="container mx-auto px-4 text-center">
-            <h2 className="text-4xl font-bold mb-4">Ready to Spark Your Potential?</h2>
-            <div className="w-24 h-1 bg-[#FF7A59] mx-auto mb-8"></div>
-            <div className="flex justify-center">
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="bg-[#FAFAFA] p-6 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.05)] w-full max-w-md">
-                    <h3 className="font-bold text-lg mb-4">Get Your Early Invite</h3>
-                    <ul className="space-y-2 text-left mb-6">
-                        <li className="flex items-center"><CheckCircle className="w-5 h-5 text-[#FF7A59] mr-2" /><span>Priority access to the beta</span></li>
-                        <li className="flex items-center"><CheckCircle className="w-5 h-5 text-[#FF7A59] mr-2" /><span>Exclusive beta-tester badge</span></li>
-                        <li className="flex items-center"><CheckCircle className="w-5 h-5 text-[#FF7A59] mr-2" /><span>Shape the future of PeerSpark</span></li>
-                    </ul>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <Input type="text" placeholder="Your Name" className="bg-white" value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} />
-                        <Input type="email" placeholder="Your Email" className="bg-white" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
-                        <motion.div whileHover={{ y: -2, scale: 1.01 }} transition={{ type: 'spring', stiffness: 300 }}>
-                          <Button type="submit" className="w-full bg-[#FF7A59] text-white hover:bg-[#ff8b70]" disabled={isLoading}>
-                              {isLoading ? 'Submitting...' : 'Get My Invite'}
-                          </Button>
-                        </motion.div>
-                    </form>
-                </motion.div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <Card
+                key={index}
+                className="card-hover animate-slide-in-left"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <CardHeader>
+                  <div
+                    className={`w-12 h-12 bg-gradient-to-r ${feature.gradient} rounded-lg flex items-center justify-center mb-4`}
+                  >
+                    <feature.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <CardTitle className="text-xl">{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-base leading-relaxed">{feature.description}</CardDescription>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </section>
 
-      <footer className="bg-white border-t border-gray-200 py-8">
-          <div className="container mx-auto px-4 text-center text-gray-600">
-              <div className="flex justify-center space-x-6 mb-4">
-                  <a href="#" className="hover:text-[#FF7A59]"><Twitter /></a>
-                  <a href="#" className="hover:text-[#FF7A59]"><Linkedin /></a>
-                  <a href="#" className="hover:text-[#FF7A59]"><Gitlab /></a>
-              </div>
-              <p>&copy; {new Date().getFullYear()} PeerSpark. All rights reserved.</p>
+      {/* Testimonials Section */}
+      <section id="testimonials" className="py-20 bg-muted/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16 animate-fade-in-up">
+            <h2 className="text-3xl lg:text-5xl font-bold mb-6">
+              Loved by Students at <span className="text-gradient">Top Universities</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Join thousands of students who've transformed their academic journey with PeerSpark.
+            </p>
           </div>
+
+          <div className="max-w-4xl mx-auto">
+            <Card className="glass animate-scale-in">
+              <CardContent className="p-8 lg:p-12">
+                <div className="text-center">
+                  <div className="flex justify-center mb-6">
+                    {[...Array(testimonials[currentTestimonial].rating)].map((_, i) => (
+                      <Star key={i} className="w-6 h-6 text-yellow-400 fill-current" />
+                    ))}
+                  </div>
+
+                  <blockquote className="text-xl lg:text-2xl font-medium mb-8 leading-relaxed">
+                    "{testimonials[currentTestimonial].content}"
+                  </blockquote>
+
+                  <div className="flex items-center justify-center space-x-4">
+                    <img
+                      src={testimonials[currentTestimonial].avatar || "/placeholder.svg"}
+                      alt={testimonials[currentTestimonial].name}
+                      className="w-16 h-16 rounded-full"
+                    />
+                    <div className="text-left">
+                      <div className="font-semibold text-lg">{testimonials[currentTestimonial].name}</div>
+                      <div className="text-muted-foreground">{testimonials[currentTestimonial].role}</div>
+                      <div className="text-sm text-gradient font-medium">
+                        {testimonials[currentTestimonial].university}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Testimonial Navigation */}
+            <div className="flex justify-center mt-8 space-x-2">
+              {testimonials.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentTestimonial(index)}
+                  className={`w-3 h-3 rounded-full transition-all ${
+                    index === currentTestimonial
+                      ? "bg-gradient-to-r from-blue-500 to-purple-600"
+                      : "bg-muted-foreground/30"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16 animate-fade-in-up">
+            <h2 className="text-3xl lg:text-5xl font-bold mb-6">
+              Choose Your <span className="text-gradient">Learning Journey</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Start free and upgrade as you grow. All plans include our core collaborative features.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {pricingPlans.map((plan, index) => (
+              <Card
+                key={index}
+                className={`relative card-hover animate-slide-in-right ${plan.popular ? "ring-2 ring-blue-500" : ""}`}
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                {plan.popular && (
+                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+                    Most Popular
+                  </Badge>
+                )}
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                  <div className="text-4xl font-bold text-gradient">
+                    {plan.price}
+                    <span className="text-lg text-muted-foreground font-normal">/{plan.period}</span>
+                  </div>
+                  <CardDescription>{plan.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3 mb-8">
+                    {plan.features.map((feature, featureIndex) => (
+                      <li key={featureIndex} className="flex items-center">
+                        <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                        <span className="text-sm">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href="/register">
+                    <Button className={`w-full ${plan.popular ? "premium-button text-white" : ""}`}>
+                      {plan.name === "Free" ? "Get Started" : "Start Free Trial"}
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter Section */}
+      <section className="py-20 bg-muted/50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="animate-fade-in-up">
+            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
+              Stay Updated with <span className="text-gradient">PeerSpark</span>
+            </h2>
+            <p className="text-xl text-muted-foreground mb-8">
+              Get the latest features, study tips, and success stories delivered to your inbox.
+            </p>
+
+            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="flex-1"
+              />
+              <Button type="submit" className="premium-button text-white">
+                Subscribe
+              </Button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-background border-t py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold text-gradient">PeerSpark</span>
+              </div>
+              <p className="text-muted-foreground">Transforming education through AI-powered collaborative learning.</p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-4">Product</h3>
+              <ul className="space-y-2 text-muted-foreground">
+                <li>
+                  <Link href="#features" className="hover:text-foreground transition-colors">
+                    Features
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#pricing" className="hover:text-foreground transition-colors">
+                    Pricing
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/demo" className="hover:text-foreground transition-colors">
+                    Demo
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-4">Company</h3>
+              <ul className="space-y-2 text-muted-foreground">
+                <li>
+                  <Link href="/about" className="hover:text-foreground transition-colors">
+                    About
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/careers" className="hover:text-foreground transition-colors">
+                    Careers
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="hover:text-foreground transition-colors">
+                    Contact
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-4">Support</h3>
+              <ul className="space-y-2 text-muted-foreground">
+                <li>
+                  <Link href="/help" className="hover:text-foreground transition-colors">
+                    Help Center
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/privacy" className="hover:text-foreground transition-colors">
+                    Privacy
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms" className="hover:text-foreground transition-colors">
+                    Terms
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t mt-12 pt-8 text-center text-muted-foreground">
+            <p>&copy; 2024 PeerSpark. All rights reserved.</p>
+          </div>
+        </div>
       </footer>
     </div>
-  );
+  )
 }

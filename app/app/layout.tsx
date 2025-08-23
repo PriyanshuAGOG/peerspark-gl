@@ -1,18 +1,48 @@
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
-import AuthenticatedLayout from './authenticated-layout' // Import the new client component
+"use client"
 
-// This is now a pure Server Component.
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = cookies()
-  const hasAccess = cookieStore.get('peer-spark-beta-access')
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+import { useAuth } from "@/contexts/auth-context"
+import { Loader2 } from "lucide-react"
+import { AppSidebar } from "@/components/app-sidebar"
+import { MobileHeader } from "@/components/mobile-header"
+import { MobileNavigation } from "@/components/mobile-navigation"
 
-  // This server-side check protects all routes under /app/*
-  if (hasAccess?.value !== 'granted') {
-    // If the user doesn't have the access cookie, redirect to the waitlist page.
-    redirect('/')
+// This is a new Client Component to handle authentication state and redirection.
+export default function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    // If the user is not loading and is not logged in, redirect to the login page.
+    if (!loading && !user) {
+      router.push("/login")
+    }
+  }, [user, loading, router])
+
+  // While checking for the user, show a loading spinner.
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
-  // If they have access, render the client component which will handle auth state.
-  return <AuthenticatedLayout>{children}</AuthenticatedLayout>
+  // If there's no user, return null while the redirect happens.
+  if (!user) {
+    return null
+  }
+
+  // If the user is authenticated, render the main app layout.
+  return (
+    <div className="flex h-screen bg-background">
+      <AppSidebar />
+      <main className="flex-1 overflow-y-auto">
+        <MobileHeader />
+        {children}
+      </main>
+      <MobileNavigation />
+    </div>
+  )
 }

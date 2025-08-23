@@ -27,6 +27,7 @@ appwrite databases create-string-attribute --databaseId "$DATABASE_ID" --collect
 appwrite databases create-string-attribute --databaseId "$DATABASE_ID" --collectionId "users" --key "avatar" --size 255 --required=false
 appwrite databases create-integer-attribute --databaseId "$DATABASE_ID" --collectionId "users" --key "followersCount" --required=false --default=0
 appwrite databases create-integer-attribute --databaseId "$DATABASE_ID" --collectionId "users" --key "followingCount" --required=false --default=0
+appwrite databases create-boolean-attribute --databaseId "$DATABASE_ID" --collectionId "users" --key "hasBetaAccess" --required=false --default=false
 
 # Posts Collection
 echo "Creating collection: Posts (posts)..."

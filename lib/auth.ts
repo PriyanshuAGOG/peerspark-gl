@@ -35,6 +35,7 @@ export interface UserProfile extends Models.Document {
   isPrivate: boolean
   emailNotifications: boolean
   pushNotifications: boolean
+  hasBetaAccess: boolean
   lastActive?: string
   joinedAt: string
 }
@@ -93,6 +94,7 @@ export class AuthService {
           isPrivate: false,
           emailNotifications: true,
           pushNotifications: true,
+          hasBetaAccess: false,
           joinedAt: new Date().toISOString(),
         }
       )

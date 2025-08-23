@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { Models } from 'appwrite'
 import { authService, UserProfile } from '@/lib/auth'
+import { AccessCodeModal } from '@/components/access-code-modal'
 
 interface AuthContextType {
   user: Models.User<Models.Preferences> | null
@@ -27,6 +28,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<Models.User<Models.Preferences> | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showAccessModal, setShowAccessModal] = useState(false);
+
+
+  const checkAuth = async () => {
+    try {
+      const currentUser = await authService.getCurrentUser()
+      if (currentUser && currentUser.profile) {
+        setUser(currentUser.user)
+        setProfile(currentUser.profile)
+        // If user is logged in but doesn't have beta access, show the modal.
+        if (!currentUser.profile.hasBetaAccess) {
+            setShowAccessModal(true);
+        }
+      }
+    } catch (error) {
+      console.error('Auth check error:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     checkAuth()
@@ -56,9 +77,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await authService.login(email, password)
       setUser(result.user)
       setProfile(result.profile)
-
-      // Update last active
-      authService.updateLastActive(result.user.$id)
+      if (result.profile && !result.profile.hasBetaAccess) {
+        setShowAccessModal(true);
+      }
     } catch (error) {
       console.error('Login error:', error)
       throw error
@@ -82,6 +103,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
       setUser(result.user)
       setProfile(result.profile as UserProfile)
+      // New users will always need to enter an access code
+      setShowAccessModal(true);
     } catch (error) {
       console.error('Registration error:', error)
       throw error
@@ -117,6 +140,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userProfile = await authService.getUserProfile(user.$id)
       setProfile(userProfile)
+      // If they now have access, hide the modal.
+      if (userProfile?.hasBetaAccess) {
+        setShowAccessModal(false);
+      }
     } catch (error) {
       console.error('Profile refresh error:', error)
     }
@@ -133,7 +160,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshProfile,
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <AccessCodeModal
+        isOpen={showAccessModal}
+        onSuccess={() => {
+            setShowAccessModal(false);
+            refreshProfile(); // Re-fetch profile to confirm access and get latest data
+        }}
+      />
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {
