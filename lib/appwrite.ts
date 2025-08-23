@@ -16,7 +16,14 @@ export const messaging = new Messaging(client)
 
 // Environment variables
 export const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!
-export const STORAGE_ID = process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!
+
+// Bucket IDs
+export const BUCKETS = {
+  AVATARS: process.env.NEXT_PUBLIC_APPWRITE_AVATARS_BUCKET_ID || 'avatars',
+  RESOURCES: process.env.NEXT_PUBLIC_APPWRITE_RESOURCES_BUCKET_ID || 'resources',
+  ATTACHMENTS: process.env.NEXT_PUBLIC_APPWRITE_ATTACHMENTS_BUCKET_ID || 'attachments',
+  POST_IMAGES: process.env.NEXT_PUBLIC_APPWRITE_POST_IMAGES_BUCKET_ID || 'post_images',
+}
 
 // Collection IDs
 export const COLLECTIONS = {
@@ -38,6 +45,7 @@ export const COLLECTIONS = {
   ACHIEVEMENTS: "achievements",
   USER_ACHIEVEMENTS: "user-achievements",
   PUSH_SUBSCRIPTIONS: "push-subscriptions-collection", // This was missing in the guide's env vars
+  TRENDING_TOPICS: "trending_topics",
 }
 
 export default client

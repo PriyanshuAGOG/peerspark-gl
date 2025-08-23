@@ -49,10 +49,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { chatService, ChatRoom, ChatMessage } from "@/lib/services/chat"
+import { chatService, ChatRoom, ChatMessage } from "@/lib/chat"
 import { usersService } from "@/lib/services/users"
 import { UserProfile } from "@/lib/auth"
-import { aiService } from "@/lib/services/ai"
+import { jitsiService } from "@/lib/services/jitsi"
+import { storageService } from "@/lib/storage"
 
 export default function ChatPage() {
   const [rooms, setRooms] = useState<ChatRoom[]>([])
@@ -62,10 +63,14 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const [isLoadingRooms, setIsLoadingRooms] = useState(true)
   const [showMobileChatList, setShowMobileChatList] = useState(true)
   const [showNewChatDialog, setShowNewChatDialog] = useState(false)
   const [newChatType, setNewChatType] = useState<"pod" | "direct">("direct")
+  const [newUserSearchQuery, setNewUserSearchQuery] = useState("")
+  const [userSearchResults, setUserSearchResults] = useState<UserProfile[]>([])
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -152,15 +157,8 @@ export default function ChatPage() {
     setInputValue("")
 
     try {
+      // The sendMessage service now automatically handles @ai mentions
       await chatService.sendMessage(selectedRoom.roomId, user.$id, messageToSend)
-
-      if (messageToSend.includes("@ai")) {
-        setIsLoading(true)
-        const aiResponse = await aiService.getAIResponseForChat(messageToSend);
-        await chatService.sendMessage(selectedRoom.roomId, 'ai-assistant', aiResponse);
-        setIsLoading(false)
-      }
-
     } catch (error) {
       toast({
         title: "Error",
@@ -171,16 +169,6 @@ export default function ChatPage() {
     }
   }
 
-  const generateAIResponse = (input: string): string => {
-    const responses = [
-      "I'd be happy to help you with that! Let me break this down step by step...",
-      "Great question! Here's what you need to know about this topic...",
-      "That's an interesting problem. Let me walk you through the solution...",
-      "I can definitely assist with that. Here's my explanation...",
-    ]
-    return responses[Math.floor(Math.random() * responses.length)]
-  }
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
@@ -188,14 +176,40 @@ export default function ChatPage() {
     }
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedRoom || !user) return;
     const file = e.target.files?.[0]
     if (!file) return
 
-    toast({
-      title: "File upload",
-      description: `Uploading ${file.name}...`,
-    })
+    setIsUploading(true);
+    toast({ title: "Uploading...", description: `Uploading ${file.name}.` });
+
+    try {
+      const attachment = await storageService.uploadChatAttachment(file);
+
+      const messageType = file.type.startsWith('image/') ? 'image' : 'file';
+
+      await chatService.sendMessage(
+        selectedRoom.roomId,
+        user.$id,
+        file.name, // The content of the message is the file name
+        messageType,
+        undefined,
+        [attachment] // Add the attachment object to the message
+      );
+
+      toast({ title: "Upload successful!", description: `${file.name} has been sent.` });
+
+    } catch (error) {
+      console.error("File upload error:", error);
+      toast({ title: "Upload failed", description: "Could not upload the file. Please try again.", variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+      // Clear the file input
+      if(fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   }
 
   const startVideoCall = async () => {
@@ -219,12 +233,20 @@ export default function ChatPage() {
     setShowMobileChatList(false)
   }
 
-  const handleCreateNewChat = () => {
-    setShowNewChatDialog(false)
-    toast({
-      title: "Creating new chat",
-      description: `Creating new ${newChatType} chat...`,
-    })
+  const handleCreateNewDirectChat = async (otherUser: UserProfile) => {
+    if (!user) return;
+    try {
+      setShowNewChatDialog(false);
+      const newRoom = await chatService.createDirectRoom(user.$id, otherUser.userId);
+
+      // Add hydrated room to list and select it
+      const hydratedRoom = { ...newRoom, name: otherUser.displayName, avatar: otherUser.avatar };
+      setRooms(prev => [hydratedRoom, ...prev.filter(r => r.$id !== newRoom.$id)]);
+      handleRoomSelect(hydratedRoom);
+
+    } catch (error) {
+      toast({ title: "Error creating chat", description: "Could not start a new conversation.", variant: "destructive" });
+    }
   }
 
   const filteredRooms = rooms.filter((room) => room.name?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -285,22 +307,42 @@ export default function ChatPage() {
                     <TabsContent value="direct" className="space-y-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Search users</label>
-                        <Input placeholder="Type username or email..." />
+                        <Input
+                          placeholder="Type username or display name..."
+                          value={newUserSearchQuery}
+                          onChange={(e) => setNewUserSearchQuery(e.target.value)}
+                        />
                       </div>
-                      <Button onClick={handleCreateNewChat} className="w-full">
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        Start Direct Chat
-                      </Button>
+                      {isSearchingUsers ? (
+                        <div className="text-center p-4">
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                        </div>
+                      ) : userSearchResults.length > 0 ? (
+                        <ScrollArea className="h-[200px] border rounded-md">
+                          <div className="p-2 space-y-1">
+                            {userSearchResults.map(u => (
+                              <div key={u.$id} className="flex items-center justify-between p-2 hover:bg-muted rounded-md">
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage src={u.avatar} />
+                                    <AvatarFallback>{u.displayName.slice(0,2)}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="font-medium text-sm">{u.displayName}</p>
+                                    <p className="text-xs text-muted-foreground">@{u.username}</p>
+                                  </div>
+                                </div>
+                                <Button size="sm" variant="outline" onClick={() => handleCreateNewDirectChat(u)}>Chat</Button>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      ) : newUserSearchQuery && (
+                        <p className="text-sm text-muted-foreground text-center p-4">No users found.</p>
+                      )}
                     </TabsContent>
-                    <TabsContent value="pod" className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Search pods</label>
-                        <Input placeholder="Type pod name..." />
-                      </div>
-                      <Button onClick={handleCreateNewChat} className="w-full">
-                        <HashIcon className="w-4 h-4 mr-2" />
-                        Join Pod Chat
-                      </Button>
+                    <TabsContent value="pod" className="space-y-4 text-center p-4">
+                      <p className="text-sm text-muted-foreground">Pod chat creation coming soon!</p>
                     </TabsContent>
                   </Tabs>
                 </div>
@@ -434,10 +476,31 @@ export default function ChatPage() {
                               {author?.displayName || 'Unknown User'}
                             </p>
                           )}
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                            {message.content}
-                          </p>
-                          <p className="text-xs opacity-70 mt-1 lg:mt-2">
+
+                          {message.type === 'image' && message.attachments && message.attachments.length > 0 ? (
+                            <img
+                              src={message.attachments[0].fileUrl}
+                              alt={message.attachments[0].fileName}
+                              className="rounded-lg max-w-full h-auto my-2 cursor-pointer"
+                              onClick={() => window.open(message.attachments![0].fileUrl, '_blank')}
+                            />
+                          ) : message.type === 'file' && message.attachments && message.attachments.length > 0 ? (
+                            <a
+                              href={message.attachments[0].fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 bg-background/50 p-2 rounded-lg hover:bg-background"
+                            >
+                              <Paperclip className="h-4 w-4" />
+                              <span className="text-sm underline">{message.attachments[0].fileName}</span>
+                            </a>
+                          ) : (
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                              {message.content}
+                            </p>
+                          )}
+
+                          <p className="text-xs opacity-70 mt-1 lg:mt-2 text-right">
                             {formatTime(message.$createdAt)}
                           </p>
                         </div>

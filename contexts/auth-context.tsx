@@ -35,12 +35,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuth = async () => {
     try {
       const currentUser = await authService.getCurrentUser()
-      if (currentUser && currentUser.user && currentUser.profile) {
+      if (currentUser) {
         setUser(currentUser.user)
         setProfile(currentUser.profile)
 
         // Update last active
-        authService.updateLastActive(currentUser.profile.$id)
+        if (currentUser.user) {
+          authService.updateLastActive(currentUser.user.$id)
+        }
       }
     } catch (error) {
       console.error('Auth check error:', error)
@@ -52,13 +54,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const result = await authService.login(email, password)
-      if (result.user && result.profile) {
-        setUser(result.user)
-        setProfile(result.profile)
+      setUser(result.user)
+      setProfile(result.profile)
 
-        // Update last active
-        authService.updateLastActive(result.profile.$id)
-      }
+      // Update last active
+      authService.updateLastActive(result.user.$id)
     } catch (error) {
       console.error('Login error:', error)
       throw error
@@ -100,14 +100,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
-    if (!profile) return
+    if (!user) return
 
     try {
-      const updatedProfileDoc = await authService.updateProfile(profile.$id, updates)
-      const newProfile = await authService.getUserProfile(profile.userId)
-      if (newProfile) {
-        setProfile(newProfile)
-      }
+      const updatedProfile = await authService.updateProfile(user.$id, updates)
+      setProfile(updatedProfile as UserProfile)
     } catch (error) {
       console.error('Profile update error:', error)
       throw error
