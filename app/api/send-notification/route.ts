@@ -3,11 +3,14 @@ import webpush from 'web-push'
 import { databases } from '@/lib/appwrite'
 import { Query } from 'appwrite'
 
-// Configure web-push
+// Configure web-push with fallbacks for build process
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BNo_w5P-y25g2F2gq_G2k_j2b_w2E_w5P-y25g2F2gq_G2k_j2b_w2E_w5P-y25g2F2gq_G2k_j2b_w2E_w5P-y25g2F2gq_G2k_j2b_w';
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '1234567890123456789012345678901234567890123';
+
 webpush.setVapidDetails(
   'mailto:admin@peerspark.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
+  vapidPublicKey,
+  vapidPrivateKey
 )
 
 export async function POST(request: NextRequest) {

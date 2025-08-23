@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAuth } from "@/contexts/auth-context"
-import { notificationService, Notification } from "@/lib/services/notifications"
+import { notificationService } from "@/lib/services/notifications"
+import type { Notification } from "@/lib/services/notifications"
 
 interface NotificationSettings {
   dailyReminders: boolean
