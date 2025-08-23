@@ -30,6 +30,7 @@ export function PostCard({ post }: PostCardProps) {
   const [pod, setPod] = useState<Pod | null>(null)
   const [isLiked, setIsLiked] = useState(false)
   const [likeId, setLikeId] = useState<string | null>(null)
+  const [likeCount, setLikeCount] = useState(post.likesCount)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [bookmarkId, setBookmarkId] = useState<string | null>(null)
   const router = useRouter()
@@ -85,10 +86,12 @@ export function PostCard({ post }: PostCardProps) {
             await interactionsService.unlike(likeId, post.$id, 'post');
             setIsLiked(false);
             setLikeId(null);
+            setLikeCount(prev => prev - 1);
         } else {
             const newLike = await interactionsService.like(user.$id, post.$id, 'post');
             setIsLiked(true);
             setLikeId(newLike.$id);
+            setLikeCount(prev => prev + 1);
         }
     } else if (interaction === 'bookmark') {
         if (isBookmarked && bookmarkId) {
@@ -224,7 +227,7 @@ export function PostCard({ post }: PostCardProps) {
               className={`${isLiked ? "text-red-500" : ""} hover:text-red-500 h-8 px-2 md:px-3`}
             >
               <Heart className={`w-4 h-4 mr-1 md:mr-2 ${isLiked ? "fill-current" : ""}`} />
-              <span className="text-xs md:text-sm">{post.likesCount}</span>
+              <span className="text-xs md:text-sm">{likeCount}</span>
             </Button>
             <Button
               variant="ghost"

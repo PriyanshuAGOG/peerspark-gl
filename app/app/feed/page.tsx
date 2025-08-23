@@ -24,13 +24,14 @@ import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { postsService, Post } from "@/lib/services/posts"
+import { topicsService, TrendingTopic } from "@/lib/services/topics"
+import { podsService, Pod } from "@/lib/services/pods"
 import { Skeleton } from "@/components/ui/skeleton"
-
-// TODO: Fetch trending topics from backend
-const TRENDING_TOPICS: any[] = []
 
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([])
+  const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
+  const [suggestedPods, setSuggestedPods] = useState<Pod[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
@@ -72,13 +73,11 @@ export default function FeedPage() {
   }, [activeTab, user, toast])
 
   const handleLike = (postId: string) => {
-    // TODO: Implement backend call for liking a post
-    console.log(`Liking post ${postId}`)
+    // Like logic is handled in PostCard.tsx
   }
 
   const handleBookmark = (postId: string) => {
-    // TODO: Implement backend call for bookmarking a post
-    console.log(`Bookmarking post ${postId}`)
+    // Bookmark logic is handled in PostCard.tsx
   }
 
   const handleShare = (postId: string) => {
@@ -281,14 +280,18 @@ export default function FeedPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {TRENDING_TOPICS.map((topic) => (
-                  <div key={topic.tag} className="flex items-center justify-between">
-                    <Badge variant="outline" className="cursor-pointer hover:bg-muted">
-                      #{topic.tag}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{topic.posts} posts</span>
-                  </div>
-                ))}
+                {trendingTopics.length > 0 ? (
+                  trendingTopics.map((topic) => (
+                    <div key={topic.tag} className="flex items-center justify-between">
+                      <Badge variant="outline" className="cursor-pointer hover:bg-muted">
+                        #{topic.tag}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{topic.postCount} posts</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">No trending topics right now.</p>
+                )}
               </CardContent>
             </Card>
 
@@ -301,35 +304,23 @@ export default function FeedPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-sm">React Masters</h4>
-                      <p className="text-xs text-muted-foreground">Advanced React patterns</p>
-                    </div>
-                    <Button size="sm" variant="outline">
-                      Join
-                    </Button>
+                {suggestedPods.length > 0 ? (
+                  <div className="space-y-3">
+                    {suggestedPods.map(pod => (
+                      <div key={pod.$id} className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-sm cursor-pointer hover:underline" onClick={() => router.push(`/app/pods/${pod.$id}`)}>{pod.name}</h4>
+                          <p className="text-xs text-muted-foreground">{pod.subject}</p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => podsService.joinPod(pod.$id, user!.$id)}>
+                          Join
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-sm">Python Pro</h4>
-                      <p className="text-xs text-muted-foreground">Python development</p>
-                    </div>
-                    <Button size="sm" variant="outline">
-                      Join
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-sm">DevOps Hub</h4>
-                      <p className="text-xs text-muted-foreground">Cloud & infrastructure</p>
-                    </div>
-                    <Button size="sm" variant="outline">
-                      Join
-                    </Button>
-                  </div>
-                </div>
+                ) : (
+                    <p className="text-xs text-muted-foreground">No pod suggestions right now.</p>
+                )}
               </CardContent>
             </Card>
           </div>

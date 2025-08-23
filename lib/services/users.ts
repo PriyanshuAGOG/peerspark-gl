@@ -72,6 +72,49 @@ class UsersService {
           throw error;
       }
   }
+
+  async searchUsers(query: string, limit: number = 10): Promise<UserProfile[]> {
+    try {
+      if (!query) return [];
+      const response = await databases.listDocuments(
+        this.databaseId,
+        this.collectionId,
+        [
+          Query.search('displayName', query),
+          Query.limit(limit)
+        ]
+      );
+      return response.documents as UserProfile[];
+    } catch (error) {
+      console.error('Error searching users:', error);
+      return [];
+    }
+  }
+
+  async getProfiles(userIds: string[]): Promise<Record<string, UserProfile>> {
+    try {
+      if (userIds.length === 0) return {};
+
+      const response = await databases.listDocuments(
+        this.databaseId,
+        this.collectionId,
+        [
+          Query.equal('userId', userIds),
+          Query.limit(100) // Appwrite limit
+        ]
+      );
+
+      const profiles: Record<string, UserProfile> = {};
+      for (const doc of response.documents) {
+        profiles[doc.userId] = doc as UserProfile;
+      }
+      return profiles;
+
+    } catch (error) {
+      console.error('Error fetching multiple profiles:', error);
+      return {};
+    }
+  }
 }
 
 export const usersService = new UsersService();

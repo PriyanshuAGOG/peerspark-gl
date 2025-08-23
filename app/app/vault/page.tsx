@@ -12,7 +12,7 @@ import { FolderOpen, Search, Upload, Filter, Grid3X3, List, FileText, ImageIcon,
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { resourcesService, Resource } from "@/lib/services/resources"
-import { storageService } from "@/lib/services/storage"
+import { storageService } from "@/lib/storage"
 import { Skeleton } from "@/components/ui/skeleton"
 
 const RESOURCE_TYPES = [
