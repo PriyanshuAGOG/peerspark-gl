@@ -46,6 +46,8 @@ export const COLLECTIONS = {
   USER_ACHIEVEMENTS: "user-achievements",
   PUSH_SUBSCRIPTIONS: "push-subscriptions-collection", // This was missing in the guide's env vars
   TRENDING_TOPICS: "trending_topics",
+  WAITLIST: "waitlist",
+  ACCESS_CODES: "access_codes",
 }
 
 export default client
