@@ -1,6 +1,11 @@
-import { Client, Account, ID, Models, Databases, Query } from 'appwrite'
-import { databases, account, DATABASE_ID, COLLECTIONS } from './appwrite'
-import { usersService } from './services/users'
+import { Client, Account, ID, Models, Query } from 'appwrite'
+import { databases } from './appwrite'
+
+const client = new Client()
+  .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+  .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
+
+export const account = new Account(client)
 
 export interface UserProfile extends Models.Document {
   userId: string
@@ -30,6 +35,7 @@ export interface UserProfile extends Models.Document {
   isPrivate: boolean
   emailNotifications: boolean
   pushNotifications: boolean
+  hasBetaAccess: boolean
   lastActive?: string
   joinedAt: string
 }
@@ -57,8 +63,8 @@ export class AuthService {
 
       // Create user profile in database
       const userProfile = await databases.createDocument(
-        DATABASE_ID,
-        COLLECTIONS.USERS,
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID!,
         ID.unique(),
         {
           userId: user.$id,
@@ -88,6 +94,7 @@ export class AuthService {
           isPrivate: false,
           emailNotifications: true,
           pushNotifications: true,
+          hasBetaAccess: false,
           joinedAt: new Date().toISOString(),
         }
       )
@@ -136,12 +143,48 @@ export class AuthService {
 
   // Get user profile from database
   async getUserProfile(userId: string): Promise<UserProfile | null> {
-    return usersService.getProfile(userId);
+    try {
+      const response = await databases.listDocuments(
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID!,
+        [
+          Query.equal('userId', userId)
+        ]
+      )
+
+      if (response.documents.length > 0) {
+        const profile = response.documents[0] as UserProfile
+        // Parse JSON fields
+        if (typeof profile.skills === 'string') profile.skills = JSON.parse(profile.skills)
+        if (typeof profile.interests === 'string') profile.interests = JSON.parse(profile.interests)
+        if (typeof profile.subjects === 'string') profile.subjects = JSON.parse(profile.subjects)
+        return profile
+      }
+      return null
+    } catch (error) {
+      console.error('Error fetching user profile:', error)
+      return null
+    }
   }
 
   // Update user profile
-  async updateProfile(documentId: string, updates: Partial<UserProfile>) {
+  async updateProfile(userId: string, updates: Partial<UserProfile>) {
     try {
+      // Find user document
+      const response = await databases.listDocuments(
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID!,
+        [
+          Query.equal('userId', userId)
+        ]
+      )
+
+      if (response.documents.length === 0) {
+        throw new Error('User profile not found')
+      }
+
+      const documentId = response.documents[0].$id
+
       // Stringify array fields if they exist
       const processedUpdates = { ...updates }
       if (processedUpdates.skills) {
@@ -155,8 +198,8 @@ export class AuthService {
       }
 
       const updatedProfile = await databases.updateDocument(
-        DATABASE_ID,
-        COLLECTIONS.USERS,
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID!,
         documentId,
         processedUpdates
       )
@@ -245,8 +288,8 @@ export class AuthService {
   async checkUsernameAvailability(username: string): Promise<boolean> {
     try {
       const response = await databases.listDocuments(
-        DATABASE_ID,
-        COLLECTIONS.USERS,
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID!,
         [
           Query.equal('username', username)
         ]
@@ -259,9 +302,9 @@ export class AuthService {
   }
 
   // Update last active timestamp
-  async updateLastActive(documentId: string) {
+  async updateLastActive(userId: string) {
     try {
-      await this.updateProfile(documentId, {
+      await this.updateProfile(userId, {
         lastActive: new Date().toISOString()
       })
     } catch (error) {
