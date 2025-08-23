@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@ai-sdk/openai':
         specifier: ^0.0.44
-        version: 0.0.44(zod@4.0.17)
+        version: 0.0.44(zod@4.1.0)
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.60.0(react@19.0.0))
@@ -95,15 +95,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: latest
         version: 1.2.8(@types/react-dom@19.0.0)(@types/react@19.0.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@types/js-cookie':
-        specifier: ^3.0.6
-        version: 3.0.6
-      '@types/web-push':
-        specifier: ^3.6.4
-        version: 3.6.4
       ai:
         specifier: ^5.0.22
-        version: 5.0.22(zod@4.0.17)
+        version: 5.0.22(zod@4.1.0)
       appwrite:
         specifier: latest
         version: 18.2.0
@@ -146,9 +140,6 @@ importers:
       react:
         specifier: ^19
         version: 19.0.0
-      react-confetti:
-        specifier: ^6.4.0
-        version: 6.4.0(react@19.0.0)
       react-day-picker:
         specifier: 9.8.0
         version: 9.8.0(react@19.0.0)
@@ -184,11 +175,14 @@ importers:
         version: 3.6.7
       zod:
         specifier: ^4.0.0
-        version: 4.0.17
+        version: 4.1.0
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4.1.9
         version: 4.1.9
+      '@types/js-cookie':
+        specifier: ^3.0.6
+        version: 3.0.6
       '@types/node':
         specifier: ^22
         version: 22.0.0
@@ -198,6 +192,9 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.0.0
+      '@types/web-push':
+        specifier: ^3.6.4
+        version: 3.6.4
       postcss:
         specifier: ^8.5
         version: 8.5.0
@@ -1932,12 +1929,6 @@ packages:
     resolution: {integrity: sha512-27VKOqrYfPncKA2NrFOVhP5MGAfHKLYn/Q0mz9cNQyRAKYi3VNHwYU2qKKqPCqgBmeeJ0uAFB56NumXZ5ZReXg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  react-confetti@6.4.0:
-    resolution: {integrity: sha512-5MdGUcqxrTU26I2EU7ltkWPwxvucQTuqMm8dUz72z2YMqTD6s9vMcDUysk7n9jnC+lXuCPeJJ7Knf98VEYE9Rg==}
-    engines: {node: '>=16'}
-    peerDependencies:
-      react: ^16.3.0 || ^17.0.1 || ^18.0.0 || ^19.0.0
-
   react-day-picker@9.8.0:
     resolution: {integrity: sha512-E0yhhg7R+pdgbl/2toTb0xBhsEAtmAx1l7qjIWYfcxOy8w4rTSVfbtBoSzVVhPwKP/5E9iL38LivzoE3AQDhCQ==}
     engines: {node: '>=18'}
@@ -2116,9 +2107,6 @@ packages:
   tw-animate-css@1.3.3:
     resolution: {integrity: sha512-tXE2TRWrskc4TU3RDd7T8n8Np/wCfoeH9gz22c7PzYqNPQ9FBGFbWWzwL0JyHcFp+jHozmF76tbHfPAx22ua2Q==}
 
-  tween-functions@1.2.0:
-    resolution: {integrity: sha512-PZBtLYcCLtEcjL14Fzb1gSxPBeL7nWvGhO5ZFPGqziCcr8uvHp0NDmdjBchp6KHL+tExcg0m3NISmKxhU394dA==}
-
   typescript@5.0.2:
     resolution: {integrity: sha512-wVORMBGO/FAs/++blGNeAVdbNKtIh1rbBL2EyQ1+J9lClJ93KiiKe8PmFIVdXhHcyv44SL9oglmfeSsndo0jRw==}
     engines: {node: '>=12.20'}
@@ -2197,39 +2185,39 @@ packages:
     peerDependencies:
       zod: ^3.24.1
 
-  zod@4.0.17:
-    resolution: {integrity: sha512-1PHjlYRevNxxdy2JZ8JcNAw7rX8V9P1AKkP+x/xZfxB0K5FYfuV+Ug6P/6NVSR2jHQ+FzDDoDHS04nYUsOIyLQ==}
+  zod@4.1.0:
+    resolution: {integrity: sha512-UWxluYj2IDX9MHRXTMbB/2eeWrAMmmMSESM+MfT9MQw8U1qo9q5ASW08anoJh6AJ7pkt099fLdNFmfI+4aChHg==}
 
 snapshots:
 
-  '@ai-sdk/gateway@1.0.11(zod@4.0.17)':
+  '@ai-sdk/gateway@1.0.11(zod@4.1.0)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
-      '@ai-sdk/provider-utils': 3.0.5(zod@4.0.17)
-      zod: 4.0.17
+      '@ai-sdk/provider-utils': 3.0.5(zod@4.1.0)
+      zod: 4.1.0
 
-  '@ai-sdk/openai@0.0.44(zod@4.0.17)':
+  '@ai-sdk/openai@0.0.44(zod@4.1.0)':
     dependencies:
       '@ai-sdk/provider': 0.0.17
-      '@ai-sdk/provider-utils': 1.0.9(zod@4.0.17)
-      zod: 4.0.17
+      '@ai-sdk/provider-utils': 1.0.9(zod@4.1.0)
+      zod: 4.1.0
 
-  '@ai-sdk/provider-utils@1.0.9(zod@4.0.17)':
+  '@ai-sdk/provider-utils@1.0.9(zod@4.1.0)':
     dependencies:
       '@ai-sdk/provider': 0.0.17
       eventsource-parser: 1.1.2
       nanoid: 3.3.6
       secure-json-parse: 2.7.0
     optionalDependencies:
-      zod: 4.0.17
+      zod: 4.1.0
 
-  '@ai-sdk/provider-utils@3.0.5(zod@4.0.17)':
+  '@ai-sdk/provider-utils@3.0.5(zod@4.1.0)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
       '@standard-schema/spec': 1.0.0
       eventsource-parser: 3.0.5
-      zod: 4.0.17
-      zod-to-json-schema: 3.24.6(zod@4.0.17)
+      zod: 4.1.0
+      zod-to-json-schema: 3.24.6(zod@4.1.0)
 
   '@ai-sdk/provider@0.0.17':
     dependencies:
@@ -3464,13 +3452,13 @@ snapshots:
 
   agent-base@7.1.4: {}
 
-  ai@5.0.22(zod@4.0.17):
+  ai@5.0.22(zod@4.1.0):
     dependencies:
-      '@ai-sdk/gateway': 1.0.11(zod@4.0.17)
+      '@ai-sdk/gateway': 1.0.11(zod@4.1.0)
       '@ai-sdk/provider': 2.0.0
-      '@ai-sdk/provider-utils': 3.0.5(zod@4.0.17)
+      '@ai-sdk/provider-utils': 3.0.5(zod@4.1.0)
       '@opentelemetry/api': 1.9.0
-      zod: 4.0.17
+      zod: 4.1.0
 
   appwrite@18.2.0: {}
 
@@ -3827,11 +3815,6 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  react-confetti@6.4.0(react@19.0.0):
-    dependencies:
-      react: 19.0.0
-      tween-functions: 1.2.0
-
   react-day-picker@9.8.0(react@19.0.0):
     dependencies:
       '@date-fns/tz': 1.2.0
@@ -4021,8 +4004,6 @@ snapshots:
 
   tw-animate-css@1.3.3: {}
 
-  tween-functions@1.2.0: {}
-
   typescript@5.0.2: {}
 
   undici-types@6.11.1: {}
@@ -4094,8 +4075,8 @@ snapshots:
 
   yallist@5.0.0: {}
 
-  zod-to-json-schema@3.24.6(zod@4.0.17):
+  zod-to-json-schema@3.24.6(zod@4.1.0):
     dependencies:
-      zod: 4.0.17
+      zod: 4.1.0
 
-  zod@4.0.17: {}
+  zod@4.1.0: {}

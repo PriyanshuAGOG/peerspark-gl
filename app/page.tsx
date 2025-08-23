@@ -171,7 +171,7 @@ export default function LandingPage() {
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // Handle newsletter signup
-    // A toast message could be shown here on success
+    console.log("Newsletter signup:", email)
     setEmail("")
   }
 

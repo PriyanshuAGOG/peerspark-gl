@@ -89,6 +89,7 @@ export function NotificationCenter() {
 
   const deleteNotification = (id: string) => {
     // TODO: Implement delete notification
+    console.log("Deleting notification", id)
   }
 
   const formatTimestamp = (timestamp: string) => {

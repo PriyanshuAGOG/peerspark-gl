@@ -1,5 +1,6 @@
 import { databases } from '../appwrite'
 import { ID, Query } from 'appwrite'
+import { COLLECTIONS, DATABASE_ID } from '../appwrite'
 import { interactionsService } from './interactions'
 import { podsService } from './pods'
 
@@ -31,11 +32,11 @@ export interface Post {
 }
 
 class PostsService {
-  private databaseId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!
-  private collectionId = process.env.NEXT_PUBLIC_APPWRITE_POSTS_COLLECTION_ID!
+  private databaseId = DATABASE_ID
+  private collectionId = COLLECTIONS.POSTS
 
   // Create post
-  async createPost(postData: Partial<Post>): Promise<Post> {
+  async createPost(postData: Omit<Post, '$id' | 'postId' | 'likesCount' | 'commentsCount' | 'sharesCount' | 'bookmarksCount' | 'viewsCount' | 'isPinned' | 'isEdited' | 'createdAt'>): Promise<Post> {
     try {
       const postId = ID.unique()
       const post = await databases.createDocument(
@@ -127,18 +128,8 @@ class PostsService {
   }
 
   // Update post
-  async updatePost(postId: string, updates: Partial<Post>): Promise<Post> {
+  async updatePost(documentId: string, updates: Partial<Post>): Promise<Post> {
     try {
-      const response = await databases.listDocuments(
-        this.databaseId,
-        this.collectionId,
-        [Query.equal('postId', postId)]
-      )
-
-      if (response.documents.length === 0) {
-        throw new Error('Post not found')
-      }
-
       const processedUpdates = { ...updates }
       if (processedUpdates.tags) {
         processedUpdates.tags = JSON.stringify(processedUpdates.tags) as any
@@ -150,7 +141,7 @@ class PostsService {
       const updatedPost = await databases.updateDocument(
         this.databaseId,
         this.collectionId,
-        response.documents[0].$id,
+        documentId,
         {
           ...processedUpdates,
           isEdited: true,
@@ -166,22 +157,12 @@ class PostsService {
   }
 
   // Delete post
-  async deletePost(postId: string): Promise<void> {
+  async deletePost(documentId: string): Promise<void> {
     try {
-      const response = await databases.listDocuments(
-        this.databaseId,
-        this.collectionId,
-        [Query.equal('postId', postId)]
-      )
-
-      if (response.documents.length === 0) {
-        throw new Error('Post not found')
-      }
-
       await databases.deleteDocument(
         this.databaseId,
         this.collectionId,
-        response.documents[0].$id
+        documentId
       )
     } catch (error) {
       console.error('Error deleting post:', error)

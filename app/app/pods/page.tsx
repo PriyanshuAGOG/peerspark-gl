@@ -33,17 +33,10 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { podsService, Pod } from "@/lib/services/pods"
-import { Book, Palette, HeartPulse, Languages, Briefcase, FlaskConical } from "lucide-react"
+import { aiService } from "@/lib/services/ai"
 
-const CATEGORIES = [
-    { name: "All", icon: Globe },
-    { name: "Programming", icon: Book },
-    { name: "Design", icon: Palette },
-    { name: "Medical", icon: HeartPulse },
-    { name: "Languages", icon: Languages },
-    { name: "Business", icon: Briefcase },
-    { name: "Science", icon: FlaskConical },
-]
+// TODO: Fetch categories from backend
+const CATEGORIES: any[] = []
 
 export default function PodsPage() {
   const [myPods, setMyPods] = useState<Pod[]>([])
@@ -203,29 +196,18 @@ export default function PodsPage() {
     }
 
     try {
-      const response = await fetch('/api/ai-study-plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject: schedulerForm.subject,
-          duration: Number.parseInt(schedulerForm.duration),
-          dailyStudyTime: Number.parseInt(schedulerForm.dailyStudyTime),
-          difficulty: 'intermediate' // This should be dynamic
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate study plan');
-      }
-
-      const data = await response.json();
+        const roadmap = await aiService.generateStudyPlan({
+            subject: schedulerForm.subject,
+            duration: Number.parseInt(schedulerForm.duration),
+            dailyStudyTime: Number.parseInt(schedulerForm.dailyStudyTime),
+            difficulty: 'intermediate' // This should be dynamic
+        });
 
       toast({
         title: "Schedule Generated!",
         description: `AI-powered roadmap created for ${schedulerForm.subject}.`,
       })
-      // The generated roadmap is in data.roadmap
-      // For now, we'll just close the dialog. A real implementation would save this to the pod's calendar or resources.
+      console.log(roadmap); // For now, just log the roadmap
 
       // Reset form and close dialog
       setSchedulerForm({
@@ -377,8 +359,9 @@ export default function PodsPage() {
                               {pod.memberCount.toLocaleString()}
                             </span>
                             <span className="flex items-center text-muted-foreground">
-                              <BookOpen className="w-4 h-4 mr-1" />
-                              {pod.totalResources || 0} Resources
+                              <Star className="w-4 h-4 mr-1 text-yellow-500" />
+                              {/* TODO: Add rating */}
+                              4.8
                             </span>
                           </div>
                           <Badge variant="outline">{pod.subject}</Badge>
@@ -465,14 +448,17 @@ export default function PodsPage() {
                   <button
                     key={category.name}
                     onClick={() => setSelectedCategory(category.name)}
-                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                       selectedCategory === category.name
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-card text-muted-foreground hover:bg-muted"
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground"
                     }`}
                   >
                     <category.icon className="w-4 h-4" />
                     <span>{category.name}</span>
+                    <Badge variant="secondary" className="text-xs">
+                      {category.count}
+                    </Badge>
                   </button>
                 ))}
               </div>
@@ -512,8 +498,8 @@ export default function PodsPage() {
                               {pod.memberCount.toLocaleString()}
                             </span>
                             <span className="flex items-center text-muted-foreground">
-                              <BookOpen className="w-4 h-4 mr-1" />
-                              {pod.totalResources || 0} Resources
+                              <Star className="w-4 h-4 mr-1 text-yellow-500" />
+                              4.8
                             </span>
                           </div>
                           <Badge variant="outline">{pod.subject}</Badge>
