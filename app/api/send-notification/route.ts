@@ -3,17 +3,28 @@ import webpush from 'web-push'
 import { databases } from '@/lib/appwrite'
 import { Query } from 'appwrite'
 
-// Configure web-push with fallbacks for build process
-const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yM9sc2XzcRb1qVZWvAIIySW5i0-p-K1T_N8IuV5-UTLSgl1R_2L3GRQs5aP8gW1v_f2aI';
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || 'SO2So2So2So2So2So2So2So2So2So2So2So2So2So2';
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 
-webpush.setVapidDetails(
-  'mailto:admin@peerspark.com',
-  vapidPublicKey,
-  vapidPrivateKey
-)
+// Only configure web-push if VAPID keys are set
+if (vapidPublicKey && vapidPrivateKey) {
+  webpush.setVapidDetails(
+    'mailto:admin@peerspark.com',
+    vapidPublicKey,
+    vapidPrivateKey
+  );
+}
 
 export async function POST(request: NextRequest) {
+  // If keys are not configured, return an error immediately.
+  if (!vapidPublicKey || !vapidPrivateKey) {
+    console.error('VAPID keys are not configured. Cannot send push notifications.');
+    return NextResponse.json(
+      { error: 'Push notifications are not configured on the server.' },
+      { status: 500 }
+    );
+  }
+
   try {
     const { userId, title, body, data } = await request.json()
 
@@ -48,7 +59,7 @@ export async function POST(request: NextRequest) {
         }
 
         await webpush.sendNotification(pushSubscription, payload)
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error sending to subscription:', error)
 
         // Remove invalid subscriptions

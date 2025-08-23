@@ -25,6 +25,11 @@ export const BUCKETS = {
   POST_IMAGES: process.env.NEXT_PUBLIC_APPWRITE_POST_IMAGES_BUCKET_ID || 'post_images',
 }
 
+// Function IDs
+export const FUNCTIONS = {
+  VERIFY_ACCESS_CODE: process.env.NEXT_PUBLIC_APPWRITE_VERIFY_ACCESS_CODE_FUNCTION_ID || 'verify-access-code',
+}
+
 // Collection IDs
 export const COLLECTIONS = {
   USERS: process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID!,
