@@ -59,7 +59,7 @@ export class AuthService {
       const userProfile = await databases.createDocument(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID!,
-        user.$id, // Use user ID as document ID for the profile for easy lookup
+        user.$id,
         {
           userId: user.$id,
           email,
@@ -69,7 +69,6 @@ export class AuthService {
           lastName,
           plan: 'free',
           hasBetaAccess: false,
-          // Initialize other fields to default values
           skills: [],
           interests: [],
           subjects: [],
@@ -86,7 +85,12 @@ export class AuthService {
       );
 
       return { user, profile: userProfile };
-    } catch (error) {
+    } catch (error: any) {
+      // If user already exists, try to log them in instead
+      if (error.code === 409) {
+        console.log("User already exists. Attempting login...");
+        return this.login(email, password);
+      }
       console.error('Registration error:', error);
       throw error;
     }
@@ -94,6 +98,12 @@ export class AuthService {
 
   async login(email: string, password: string) {
     try {
+      // Try to delete any existing session first to prevent "session active" error
+      try {
+        await account.deleteSession('current');
+      } catch (e) {
+        // Ignore if no session exists
+      }
       const session = await account.createEmailPasswordSession(email, password);
       const user = await account.get();
       const profile = await this.getUserProfile(user.$id);
