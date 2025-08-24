@@ -59,7 +59,7 @@ export class AuthService {
       const userProfile = await databases.createDocument(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID!,
-        user.$id,
+        user.$id, // Use the user's account ID as the document ID
         {
           userId: user.$id,
           email,
@@ -86,10 +86,9 @@ export class AuthService {
 
       return { user, profile: userProfile };
     } catch (error: any) {
-      // If user already exists, try to log them in instead
+      // If user already exists, throw a more specific error
       if (error.code === 409) {
-        console.log("User already exists. Attempting login...");
-        return this.login(email, password);
+        throw new Error("A user with this email already exists. Please log in.");
       }
       console.error('Registration error:', error);
       throw error;
@@ -98,18 +97,18 @@ export class AuthService {
 
   async login(email: string, password: string) {
     try {
-      // Try to delete any existing session first to prevent "session active" error
-      try {
-        await account.deleteSession('current');
-      } catch (e) {
-        // Ignore if no session exists
-      }
+      // Appwrite automatically manages sessions, creating a new one will invalidate the old.
+      // Defensively deleting is not required and can hide other issues.
       const session = await account.createEmailPasswordSession(email, password);
       const user = await account.get();
       const profile = await this.getUserProfile(user.$id);
       return { user, profile, session };
     } catch (error) {
       console.error('Login error:', error);
+      // Make error message more generic for security
+      if (error instanceof Error && (error.message.includes('Invalid credentials') || error.message.includes('401'))) {
+          throw new Error('Invalid email or password.');
+      }
       throw error;
     }
   }
