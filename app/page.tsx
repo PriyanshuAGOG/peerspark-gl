@@ -117,49 +117,62 @@ export default function LandingPage() {
 
   const pricingPlans = [
     {
-      name: "Free",
-      price: "$0",
-      period: "forever",
-      description: "Perfect for getting started",
-      features: [
-        "Join up to 3 study pods",
-        "Basic AI tutoring (10 questions/day)",
-        "Simple progress tracking",
-        "Community access",
-      ],
-      popular: false,
+        name: "Free",
+        price: "$0",
+        period: "forever",
+        description: "For casual learners",
+        features: [
+            "Join 1 study pod",
+            "Basic chat & video sessions",
+            "Upload up to 5 files (100MB total)",
+            "Limited AI assistant (10 questions/month)",
+        ],
+        popular: false,
     },
     {
-      name: "Pro",
-      price: "$9.99",
-      period: "month",
-      description: "For serious students",
-      features: [
-        "Unlimited study pods",
-        "Advanced AI tutoring",
-        "Detailed analytics & insights",
-        "Priority matching",
-        "Custom study schedules",
-        "Resource sharing",
-      ],
-      popular: true,
+        name: "Student",
+        price: "$5",
+        period: "month",
+        description: "For the dedicated student",
+        features: [
+            "Join or create up to 5 pods",
+            "Unlimited messages & meetings",
+            "Upload up to 100 files (2GB total)",
+            "AI assistant (300 messages/month)",
+            "Personal analytics dashboard",
+        ],
+        popular: true,
     },
     {
-      name: "Team",
-      price: "$19.99",
-      period: "month",
-      description: "For study groups & classes",
-      features: [
-        "Everything in Pro",
-        "Group management tools",
-        "Instructor dashboard",
-        "Advanced collaboration",
-        "Custom integrations",
-        "Priority support",
-      ],
-      popular: false,
+        name: "Pro",
+        price: "$20",
+        period: "month",
+        description: "For power learners & tutors",
+        features: [
+            "Unlimited pods & uploads (10GB total)",
+            "Unlimited AI assistant",
+            "Personalized study plan generator",
+            "Video session recording",
+            "Calendar integrations",
+        ],
+        popular: false,
     },
-  ]
+  ];
+
+  const enterprisePlan = {
+      name: "Institution/School Plan",
+      description: "A custom solution for your entire institution with advanced admin and security features.",
+      features: [
+          "Unlimited students & educators",
+          "Custom branding and portal",
+          "Admin & teacher dashboards",
+          "Bulk pod creation and assignments",
+          "Detailed learning analytics",
+          "Integration with your LMS",
+          "Onboarding and training support",
+          "Dedicated account manager",
+      ]
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -445,11 +458,11 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-12">
             {pricingPlans.map((plan, index) => (
               <Card
                 key={index}
-                className={`relative card-hover animate-slide-in-right ${plan.popular ? "ring-2 ring-blue-500" : ""}`}
+                className={`relative card-hover animate-slide-in-right flex flex-col ${plan.popular ? "ring-2 ring-blue-500" : ""}`}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 {plan.popular && (
@@ -465,12 +478,12 @@ export default function LandingPage() {
                   </div>
                   <CardDescription>{plan.description}</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3 mb-8">
+                <CardContent className="flex-1 flex flex-col">
+                  <ul className="space-y-3 mb-8 flex-1">
                     {plan.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-center">
-                        <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                        <span className="text-sm">{feature}</span>
+                      <li key={featureIndex} className="flex items-start">
+                        <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-1" />
+                        <span className="text-sm text-left">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -482,6 +495,33 @@ export default function LandingPage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+
+          {/* Enterprise Plan */}
+          <div className="max-w-5xl mx-auto">
+             <Card className="glass card-hover animate-scale-in">
+                <CardContent className="p-8 lg:p-12 flex flex-col md:flex-row items-center gap-8">
+                    <div className="flex-1 text-center md:text-left">
+                        <h3 className="text-2xl font-bold mb-2">{enterprisePlan.name}</h3>
+                        <p className="text-muted-foreground mb-4">{enterprisePlan.description}</p>
+                        <ul className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm text-left">
+                            {enterprisePlan.features.map((feature, i) => (
+                                <li key={i} className="flex items-center">
+                                    <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
+                                    <span>{feature}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    <div className="flex-shrink-0">
+                        <Link href="/contact-sales">
+                            <Button size="lg" className="premium-button text-white px-8 py-4 text-lg">
+                                Book a Demo
+                            </Button>
+                        </Link>
+                    </div>
+                </CardContent>
+             </Card>
           </div>
         </div>
       </section>
@@ -553,17 +593,17 @@ export default function LandingPage() {
               <h3 className="font-semibold mb-4">Company</h3>
               <ul className="space-y-2 text-muted-foreground">
                 <li>
-                  <Link href="/about" className="hover:text-foreground transition-colors">
+                  <Link href="/" className="hover:text-foreground transition-colors">
                     About
                   </Link>
                 </li>
                 <li>
-                  <Link href="/careers" className="hover:text-foreground transition-colors">
+                  <Link href="/" className="hover:text-foreground transition-colors">
                     Careers
                   </Link>
                 </li>
                 <li>
-                  <Link href="/contact" className="hover:text-foreground transition-colors">
+                  <Link href="/" className="hover:text-foreground transition-colors">
                     Contact
                   </Link>
                 </li>
@@ -574,17 +614,17 @@ export default function LandingPage() {
               <h3 className="font-semibold mb-4">Support</h3>
               <ul className="space-y-2 text-muted-foreground">
                 <li>
-                  <Link href="/help" className="hover:text-foreground transition-colors">
+                  <Link href="/" className="hover:text-foreground transition-colors">
                     Help Center
                   </Link>
                 </li>
                 <li>
-                  <Link href="/privacy" className="hover:text-foreground transition-colors">
+                  <Link href="/" className="hover:text-foreground transition-colors">
                     Privacy
                   </Link>
                 </li>
                 <li>
-                  <Link href="/terms" className="hover:text-foreground transition-colors">
+                  <Link href="/" className="hover:text-foreground transition-colors">
                     Terms
                   </Link>
                 </li>

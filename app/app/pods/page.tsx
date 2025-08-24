@@ -96,6 +96,14 @@ export default function PodsPage() {
   }
 
   const handleCreatePod = () => {
+    if (user && myPods.length >= 1 && profile?.plan === 'free') {
+        toast({
+            title: "Upgrade to create more pods",
+            description: "Free users can only be a member of one pod.",
+            variant: "destructive"
+        });
+        return;
+    }
     setIsCreateDialogOpen(true)
   }
 
@@ -524,6 +532,7 @@ export default function PodsPage() {
                           <Button
                             onClick={() => handleJoinExplorePod(pod.$id, pod.name)}
                             className="flex-1 bg-primary hover:bg-primary/90"
+                            disabled={myPods.length >= 1 && profile?.plan === 'free'}
                           >
                             <Plus className="w-4 h-4 mr-2" />
                             Join Pod
