@@ -54,7 +54,7 @@ export class AuthService {
         `${firstName} ${lastName}`
       );
 
-      await account.createEmailSession(email, password);
+      await account.createEmailPasswordSession(email, password);
 
       const userProfile = await databases.createDocument(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
@@ -94,7 +94,7 @@ export class AuthService {
 
   async login(email: string, password: string) {
     try {
-      const session = await account.createEmailSession(email, password);
+      const session = await account.createEmailPasswordSession(email, password);
       const user = await account.get();
       const profile = await this.getUserProfile(user.$id);
       return { user, profile, session };
