@@ -1,0 +1,16 @@
+{
+  "name": "peerspark-setup",
+  "version": "1.0.0",
+  "description": "Appwrite setup scripts for PeerSpark",
+  "main": "setup-appwrite.js",
+  "scripts": {
+    "setup": "node setup-appwrite.js",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "node-appwrite": "^13.0.0"
+  },
+  "keywords": ["appwrite", "setup", "peerspark"],
+  "author": "PeerSpark Team",
+  "license": "MIT"
+}

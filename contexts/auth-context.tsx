@@ -19,6 +19,7 @@ interface AuthContextType {
   logout: () => Promise<void>
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>
   refreshProfile: () => Promise<void>
+  loginWithOAuth: (provider: 'google' | 'github' | 'discord') => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -125,6 +126,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const loginWithOAuth = (provider: 'google' | 'github' | 'discord') => {
+    authService.loginWithOAuth(provider)
+  }
+
   const value = {
     user,
     profile,
@@ -134,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     updateProfile,
     refreshProfile,
+    loginWithOAuth,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

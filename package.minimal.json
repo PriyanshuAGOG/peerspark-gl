@@ -1,0 +1,29 @@
+{
+  \"name\": \"peerspark-minimal\",
+  \"version\": \"0.1.0\",
+  \"private\": true,
+  \"scripts\": {
+    \"build\": \"next build\",
+    \"dev\": \"next dev\",
+    \"start\": \"next start\"
+  },
+  \"dependencies\": {
+    \"@radix-ui/react-avatar\": \"1.1.10\",
+    \"@radix-ui/react-button\": \"^0.1.0\",
+    \"@radix-ui/react-card\": \"^0.1.0\",
+    \"appwrite\": \"^16.0.0\",
+    \"clsx\": \"^2.1.1\",
+    \"lucide-react\": \"^0.454.0\",
+    \"next\": \"14.2.4\",
+    \"react\": \"^18.3.1\",
+    \"react-dom\": \"^18.3.1\",
+    \"tailwind-merge\": \"^2.5.5\"
+  },
+  \"devDependencies\": {
+    \"@types/node\": \"^22\",
+    \"@types/react\": \"^18\",
+    \"@types/react-dom\": \"^18\",
+    \"tailwindcss\": \"^3.4.0\",
+    \"typescript\": \"^5\"
+  }
+}

@@ -1,0 +1,193 @@
+{
+  "collections": [
+    {
+      "id": "users-collection",
+      "name": "Users",
+      "permissions": ["read(\"any\")", "write(\"users\")"],
+      "attributes": [
+        { "key": "userId", "type": "string", "size": 255, "required": true },
+        { "key": "email", "type": "string", "size": 255, "required": true },
+        { "key": "username", "type": "string", "size": 50, "required": true },
+        { "key": "displayName", "type": "string", "size": 100, "required": true },
+        { "key": "firstName", "type": "string", "size": 50, "required": true },
+        { "key": "lastName", "type": "string", "size": 50, "required": true },
+        { "key": "bio", "type": "string", "size": 500, "required": false, "default": "" },
+        { "key": "avatar", "type": "string", "size": 255, "required": false, "default": "" },
+        { "key": "coverImage", "type": "string", "size": 255, "required": false, "default": "" },
+        { "key": "location", "type": "string", "size": 100, "required": false, "default": "" },
+        { "key": "website", "type": "string", "size": 255, "required": false, "default": "" },
+        { "key": "institution", "type": "string", "size": 100, "required": false, "default": "" },
+        { "key": "major", "type": "string", "size": 100, "required": false, "default": "" },
+        { "key": "graduationYear", "type": "string", "size": 4, "required": false, "default": "" },
+        { "key": "jobTitle", "type": "string", "size": 100, "required": false, "default": "" },
+        { "key": "company", "type": "string", "size": 100, "required": false, "default": "" },
+        { "key": "skills", "type": "string", "size": 1000, "required": false, "default": "[]" },
+        { "key": "interests", "type": "string", "size": 1000, "required": false, "default": "[]" },
+        { "key": "subjects", "type": "string", "size": 1000, "required": false, "default": "[]" },
+        { "key": "followersCount", "type": "integer", "required": false, "default": 0 },
+        { "key": "followingCount", "type": "integer", "required": false, "default": 0 },
+        { "key": "postsCount", "type": "integer", "required": false, "default": 0 },
+        { "key": "reputationScore", "type": "integer", "required": false, "default": 0 },
+        { "key": "isVerified", "type": "boolean", "required": false, "default": false },
+        { "key": "isPrivate", "type": "boolean", "required": false, "default": false },
+        { "key": "emailNotifications", "type": "boolean", "required": false, "default": true },
+        { "key": "pushNotifications", "type": "boolean", "required": false, "default": true },
+        { "key": "lastActive", "type": "datetime", "required": false },
+        { "key": "joinedAt", "type": "datetime", "required": true }
+      ],
+      "indexes": [
+        { "key": "username_index", "type": "key", "attributes": ["username"] },
+        { "key": "email_index", "type": "key", "attributes": ["email"] },
+        { "key": "userId_index", "type": "key", "attributes": ["userId"] }
+      ]
+    },
+    {
+      "id": "posts-collection",
+      "name": "Posts",
+      "permissions": ["read(\"any\")", "write(\"users\")"],
+      "attributes": [
+        { "key": "postId", "type": "string", "size": 255, "required": true },
+        { "key": "authorId", "type": "string", "size": 255, "required": true },
+        { "key": "title", "type": "string", "size": 200, "required": false, "default": "" },
+        { "key": "content", "type": "string", "size": 5000, "required": true },
+        { "key": "type", "type": "string", "size": 50, "required": true, "default": "text" },
+        { "key": "mediaUrls", "type": "string", "size": 2000, "required": false, "default": "[]" },
+        { "key": "thumbnailUrl", "type": "string", "size": 255, "required": false, "default": "" },
+        { "key": "tags", "type": "string", "size": 1000, "required": false, "default": "[]" },
+        { "key": "category", "type": "string", "size": 50, "required": false, "default": "" },
+        { "key": "subject", "type": "string", "size": 100, "required": false, "default": "" },
+        { "key": "podId", "type": "string", "size": 255, "required": false, "default": "" },
+        { "key": "likesCount", "type": "integer", "required": false, "default": 0 },
+        { "key": "commentsCount", "type": "integer", "required": false, "default": 0 },
+        { "key": "sharesCount", "type": "integer", "required": false, "default": 0 },
+        { "key": "bookmarksCount", "type": "integer", "required": false, "default": 0 },
+        { "key": "viewsCount", "type": "integer", "required": false, "default": 0 },
+        { "key": "isPublic", "type": "boolean", "required": false, "default": true },
+        { "key": "allowComments", "type": "boolean", "required": false, "default": true },
+        { "key": "isPinned", "type": "boolean", "required": false, "default": false },
+        { "key": "isEdited", "type": "boolean", "required": false, "default": false },
+        { "key": "createdAt", "type": "datetime", "required": true },
+        { "key": "updatedAt", "type": "datetime", "required": false }
+      ],
+      "indexes": [
+        { "key": "postId_index", "type": "key", "attributes": ["postId"] },
+        { "key": "authorId_index", "type": "key", "attributes": ["authorId"] },
+        { "key": "createdAt_index", "type": "key", "attributes": ["createdAt"], "orders": ["desc"] },
+        { "key": "podId_index", "type": "key", "attributes": ["podId"] }
+      ]
+    },
+    {
+      "id": "pods-collection",
+      "name": "Pods",
+      "permissions": ["read(\"any\")", "write(\"users\")"],
+      "attributes": [
+        { "key": "teamId", "type": "string", "size": 255, "required": true },
+        { "key": "name", "type": "string", "size": 255, "required": true },
+        { "key": "description", "type": "string", "size": 2000, "required": true },
+        { "key": "creatorId", "type": "string", "size": 255, "required": true },
+        { "key": "members", "type": "string", "size": 5000, "required": true, "default": "[]" },
+        { "key": "subject", "type": "string", "size": 100, "required": false, "default": "" },
+        { "key": "difficulty", "type": "string", "size": 50, "required": false, "default": "Beginner" },
+        { "key": "tags", "type": "string", "size": 1000, "required": false, "default": "[]" },
+        { "key": "isActive", "type": "boolean", "required": false, "default": true },
+        { "key": "isPublic", "type": "boolean", "required": false, "default": true },
+        { "key": "maxMembers", "type": "integer", "required": false, "default": 50 },
+        { "key": "memberCount", "type": "integer", "required": false, "default": 1 },
+        { "key": "totalSessions", "type": "integer", "required": false, "default": 0 },
+        { "key": "totalResources", "type": "integer", "required": false, "default": 0 },
+        { "key": "avatar", "type": "string", "size": 500, "required": false, "default": "" },
+        { "key": "rules", "type": "string", "size": 2000, "required": false, "default": "[]" },
+        { "key": "schedule", "type": "string", "size": 2000, "required": false, "default": "{}" },
+        { "key": "createdAt", "type": "datetime", "required": true },
+        { "key": "updatedAt", "type": "datetime", "required": false }
+      ],
+      "indexes": [
+        { "key": "teamId_index", "type": "key", "attributes": ["teamId"] },
+        { "key": "creatorId_index", "type": "key", "attributes": ["creatorId"] },
+        { "key": "subject_index", "type": "key", "attributes": ["subject"] }
+      ]
+    },
+    {
+      "id": "messages-collection",
+      "name": "Messages",
+      "permissions": ["read(\"users\")", "write(\"users\")"],
+      "attributes": [
+        { "key": "messageId", "type": "string", "size": 255, "required": true },
+        { "key": "roomId", "type": "string", "size": 255, "required": true },
+        { "key": "senderId", "type": "string", "size": 255, "required": true },
+        { "key": "content", "type": "string", "size": 5000, "required": true },
+        { "key": "type", "type": "string", "size": 20, "required": true, "default": "text" },
+        { "key": "replyToId", "type": "string", "size": 255, "required": false, "default": "" },
+        { "key": "attachments", "type": "string", "size": 2000, "required": false, "default": "[]" },
+        { "key": "mentions", "type": "string", "size": 1000, "required": false, "default": "[]" },
+        { "key": "isAI", "type": "boolean", "required": false, "default": false },
+        { "key": "aiModel", "type": "string", "size": 50, "required": false, "default": "" },
+        { "key": "isEdited", "type": "boolean", "required": false, "default": false },
+        { "key": "isDeleted", "type": "boolean", "required": false, "default": false },
+        { "key": "readBy", "type": "string", "size": 2000, "required": false, "default": "[]" },
+        { "key": "createdAt", "type": "datetime", "required": true },
+        { "key": "updatedAt", "type": "datetime", "required": false }
+      ],
+      "indexes": [
+        { "key": "messageId_index", "type": "key", "attributes": ["messageId"] },
+        { "key": "roomId_index", "type": "key", "attributes": ["roomId"] },
+        { "key": "createdAt_index", "type": "key", "attributes": ["createdAt"], "orders": ["desc"] }
+      ]
+    },
+    {
+      "id": "chat-rooms-collection",
+      "name": "Chat Rooms",
+      "permissions": ["read(\"users\")", "write(\"users\")"],
+      "attributes": [
+        { "key": "roomId", "type": "string", "size": 255, "required": true },
+        { "key": "name", "type": "string", "size": 100, "required": false, "default": "" },
+        { "key": "type", "type": "string", "size": 20, "required": true },
+        { "key": "participants", "type": "string", "size": 2000, "required": true },
+        { "key": "avatar", "type": "string", "size": 255, "required": false, "default": "" },
+        { "key": "description", "type": "string", "size": 500, "required": false, "default": "" },
+        { "key": "createdBy", "type": "string", "size": 255, "required": true },
+        { "key": "podId", "type": "string", "size": 255, "required": false, "default": "" },
+        { "key": "lastMessageId", "type": "string", "size": 255, "required": false, "default": "" },
+        { "key": "lastActivity", "type": "datetime", "required": false },
+        { "key": "messageCount", "type": "integer", "required": false, "default": 0 },
+        { "key": "isActive", "type": "boolean", "required": false, "default": true },
+        { "key": "createdAt", "type": "datetime", "required": true },
+        { "key": "updatedAt", "type": "datetime", "required": false }
+      ],
+      "indexes": [
+        { "key": "roomId_index", "type": "key", "attributes": ["roomId"] },
+        { "key": "type_index", "type": "key", "attributes": ["type"] },
+        { "key": "lastActivity_index", "type": "key", "attributes": ["lastActivity"], "orders": ["desc"] }
+      ]
+    }
+  ],
+  "storage": [
+    {
+      "id": "avatars",
+      "name": "User Avatars",
+      "permissions": ["read(\"any\")", "write(\"users\")"],
+      "fileSecurity": true,
+      "enabled": true,
+      "maximumFileSize": 5000000,
+      "allowedFileExtensions": ["jpg", "jpeg", "png", "gif", "webp"]
+    },
+    {
+      "id": "resources",
+      "name": "Study Resources",
+      "permissions": ["read(\"any\")", "write(\"users\")"],
+      "fileSecurity": true,
+      "enabled": true,
+      "maximumFileSize": 50000000,
+      "allowedFileExtensions": ["pdf", "doc", "docx", "txt", "ppt", "pptx", "xls", "xlsx", "jpg", "jpeg", "png", "gif", "mp4", "mp3"]
+    },
+    {
+      "id": "attachments",
+      "name": "Chat Attachments",
+      "permissions": ["read(\"users\")", "write(\"users\")"],
+      "fileSecurity": true,
+      "enabled": true,
+      "maximumFileSize": 25000000,
+      "allowedFileExtensions": ["jpg", "jpeg", "png", "gif", "pdf", "doc", "docx", "txt", "mp4", "mp3", "zip"]
+    }
+  ]
+}

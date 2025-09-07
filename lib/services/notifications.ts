@@ -1,6 +1,6 @@
 import { databases } from '../appwrite'
+import { databases, COLLECTIONS, DATABASE_ID } from '../appwrite'
 import { ID, Query } from 'appwrite'
-import { COLLECTIONS, DATABASE_ID } from '../appwrite'
 
 export interface Notification {
   $id: string;
